@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { socket } from "./socket";
+import { useRouter } from "next/navigation"; 
 
 export default function Home() {
    
       const [roomid,setroomid]=useState("")
+      const router = useRouter();
 
   useEffect(() => {
     if (socket.connected) {
@@ -23,6 +25,7 @@ export default function Home() {
     }
 function onjoin(data){
 console.log(data.message);
+router.push(`/GameArea`)
 }
    
     socket.on("join-success",onjoin)
@@ -38,9 +41,9 @@ console.log(data.message);
     };
 
     
-  }, []);
+  }, [ router]);
 
-  const sendroomid = () => {
+  const joinRoom = () => {
   if (!roomid.trim()) return;
 
   socket.emit("roomid", roomid, (res) => {
@@ -57,7 +60,7 @@ console.log(data.message);
   return (
     <div>
 <input type="number" value={roomid}  onChange={(e)=>setroomid(e.target.value)}/>
-<button onClick={sendroomid}>Send</button>
+<button onClick={joinRoom}>Join</button>
    
 
     </div>
