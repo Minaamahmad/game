@@ -25,6 +25,17 @@ app.prepare().then(() => {
         message,
       });
     });
+const roomId=221
+    socket.on("roomid",(roomcode)=>{
+      if(roomcode==roomId){
+socket.join(roomId)
+        console.log("Room ids are matched")
+         socket.emit("join-success", { message: `you have joined ${roomId}` });
+      }
+      return
+
+     
+    })
 
     socket.on("disconnect", () => {
       console.log(" disconnected:", socket.id);
