@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
+import { Socket } from "socket.io-client";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -25,12 +26,22 @@ app.prepare().then(() => {
         message,
       });
     });
+
+
+
 const roomId=221
+
     socket.on("roomid",(roomcode)=>{
       if(roomcode==roomId){
 socket.join(roomId)
         console.log("Room ids are matched")
          socket.emit("join-success", { message: `you have joined ${roomId}` });
+      } else{
+        socket.join(roomcode)
+        socket.emit("join-success", { 
+      message: `Room ${roomId} did not match. Created and joined new room: ${roomcode}`,
+      roomcode: roomcode
+    })
       }
       return
 
