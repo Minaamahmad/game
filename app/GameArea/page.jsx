@@ -1,6 +1,12 @@
-import React from 'react'
 
+import React from 'react'
 const Game = () => {
+
+
+
+
+
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 relative overflow-hidden">
       {/* ambient glow */}

@@ -21,11 +21,24 @@ export default function Home() {
       console.log("disconnected");
     }
     function onjoin(data) {
-      console.log(data.message);
-      router.push(`/GameArea`);
+      console.log(data);
     }
 
+    const gameStart = (data) => {
+      console.log("game_start event received:", data);
+
+      if (data.players === 4) {
+        router.push("/GameArea/StartGame");
+      }
+    }
+      const onwait = (data) => {
+        console.log(data);
+        router.push("/GameArea/Waiting");
+      };
+    
+    socket.on("game_start", gameStart);
     socket.on("join-success", onjoin);
+    socket.on("waiting", onwait);
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -34,6 +47,8 @@ export default function Home() {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("join-success", onjoin);
+      socket.off("game_start", gameStart);
+      socket.off("waiting", onwait);
     };
   }, [router]);
 
