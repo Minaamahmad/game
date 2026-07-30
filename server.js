@@ -7,6 +7,8 @@ const hostname = "localhost";
 const port = 3000;
 // when using middleware `hostname` and `port` must be provided below
 const max_players = 4;
+const rooms = {};
+
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
@@ -27,7 +29,6 @@ app.prepare().then(() => {
       });
     });
 
-
     socket.on("roomid", (roomcode) => {
       const roomnum = Number(roomcode);
       const room = io.sockets.adapter.rooms.get(roomnum);
@@ -38,19 +39,28 @@ app.prepare().then(() => {
       }
       if (Number.isInteger(roomnum) && roomnum > 0) {
         socket.join(roomnum);
+
+        if (!rooms[roomnum]) rooms[roomnum] = [];
+        rooms[roomnum].push(socket.id);
+
+        console.log(rooms);
         socket.emit("join-success", {
           message: ` Created and joined new room: ${roomnum}`,
           roomcode: roomnum,
         });
       }
-      const updatedRoom = io.sockets.adapter.rooms.get(roomnum);
+      const roomId = String(roomnum);
+
+      const updatedRoom = io.sockets.adapter.rooms.get(roomId);
       const updatedCount = updatedRoom ? updatedRoom.size : 0;
 
-      console.log(`✅ ${socket.id} joined room ${roomnum} — now ${updatedCount}/${max_players}`);
+      console.log(
+        `✅ ${socket.id} joined room ${roomnum} — now ${updatedCount}/${max_players}`,
+      );
 
       if (updatedCount === max_players) {
         io.to(roomnum).emit("game_start", {
-          players:updatedCount,
+          players: updatedCount,
           message: `Room full! Starting game with ${updatedCount} players.`,
         });
       } else {
@@ -63,6 +73,7 @@ app.prepare().then(() => {
         io.to(roomnum).emit("game_start", {
           players: updatedCount,
           message: `Room full! Starting game with ${updatedCount} players.`,
+          id: socket.id,
         });
       } else {
         io.to(roomnum).emit("waiting", {
