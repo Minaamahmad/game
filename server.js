@@ -27,7 +27,6 @@ app.prepare().then(() => {
       });
     });
 
-    const roomId = 221;
 
     socket.on("roomid", (roomcode) => {
       const roomnum = Number(roomcode);
@@ -37,14 +36,10 @@ app.prepare().then(() => {
       if (currentPlayers >= max_players) {
         return console.log("room is full ");
       }
-      if (roomnum == roomId) {
-        socket.join(roomId);
-        console.log("Room ids are matched");
-        socket.emit("join-success", { message: `you have joined ${roomId}` });
-      } else {
+      if (Number.isInteger(roomnum) && roomnum > 0) {
         socket.join(roomnum);
         socket.emit("join-success", {
-          message: `Room ${roomId} did not match. Created and joined new room: ${roomnum}`,
+          message: ` Created and joined new room: ${roomnum}`,
           roomcode: roomnum,
         });
       }
