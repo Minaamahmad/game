@@ -30,58 +30,44 @@ app.prepare().then(() => {
     });
 
     socket.on("roomid", (roomcode) => {
-      const roomnum = Number(roomcode);
-      const room = io.sockets.adapter.rooms.get(roomnum);
-      const currentPlayers = room ? room.size : 0;
+  const num = Number(roomcode);
 
-      if (currentPlayers >= max_players) {
-        return console.log("room is full ");
-      }
-      if (Number.isInteger(roomnum) && roomnum > 0) {
-        socket.join(roomnum);
+  if (!Number.isInteger(num) || num <= 0) {
+    return socket.emit("join-success", { message: "Invalid room code" });
+  }
 
-        if (!rooms[roomnum]) rooms[roomnum] = [];
-        rooms[roomnum].push(socket.id);
+  const roomId = String(num);
+  const room = io.sockets.adapter.rooms.get(roomId);
+  const currentPlayers = room ? room.size : 0;
 
-        console.log(rooms);
-        socket.emit("join-success", {
-          message: ` Created and joined new room: ${roomnum}`,
-          roomcode: roomnum,
-        });
-      }
-      const roomId = String(roomnum);
+  if (currentPlayers >= max_players) {
+    return socket.emit("join-success", { message: "Room is full" });
+  }
 
-      const updatedRoom = io.sockets.adapter.rooms.get(roomId);
-      const updatedCount = updatedRoom ? updatedRoom.size : 0;
+  socket.join(roomId);
 
-      console.log(
-        `✅ ${socket.id} joined room ${roomnum} — now ${updatedCount}/${max_players}`,
-      );
+  if (!rooms[roomId]) rooms[roomId] = [];
+  rooms[roomId].push(socket.id);
 
-      if (updatedCount === max_players) {
-        io.to(roomnum).emit("game_start", {
-          players: updatedCount,
-          message: `Room full! Starting game with ${updatedCount} players.`,
-        });
-      } else {
-        io.to(roomnum).emit("waiting", {
-          message: `${updatedCount}/${max_players} players in room`,
-        });
-      }
+  console.log(rooms);
+  socket.emit("join-success", {
+    message: `Created and joined new room: ${roomId}`,
+    roomcode: roomId,
+  });
 
-      if (updatedCount === max_players) {
-        io.to(roomnum).emit("game_start", {
-          players: updatedCount,
-          message: `Room full! Starting game with ${updatedCount} players.`,
-          id: socket.id,
-        });
-      } else {
-        io.to(roomnum).emit("waiting", {
-          players: updatedCount,
-          message: `${updatedCount}/${max_players} players in room`,
-        });
-      }
-    });
+  const updatedCount = currentPlayers + 1;
+
+  console.log(`✅ ${socket.id} joined room ${roomId} — now ${updatedCount}/${max_players}`);
+
+  const eventName = updatedCount === max_players ? "game_start" : "waiting";
+  io.to(roomId).emit(eventName, {
+    players: updatedCount,
+    message:
+      eventName === "game_start"
+        ? `Room full! Starting game with ${updatedCount} players.`
+        : `${updatedCount}/${max_players} players in room`,
+  });
+});
 
     socket.on("disconnect", () => {
       console.log(" disconnected:", socket.id);

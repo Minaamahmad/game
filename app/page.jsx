@@ -1,28 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { socket } from "./socket";
 import { useRouter } from "next/navigation";
+import { useSocket } from "@/Context/contextapi.js";
+
 
 export default function Home() {
   const [roomid, setroomid] = useState("");
   const router = useRouter();
+  const socket=useSocket()
 
   useEffect(() => {
-    if (socket.connected) {
-      onConnect();
-    }
-
-    function onConnect() {
-      console.log("connected");
-    }
-
-    function onDisconnect() {
-      console.log("disconnected");
-    }
-    function onjoin(data) {
-      console.log(data);
-    }
 
     const gameStart = (data) => {
       console.log("game_start event received:", data);
@@ -37,20 +25,15 @@ export default function Home() {
       };
     
     socket.on("game_start", gameStart);
-    socket.on("join-success", onjoin);
     socket.on("waiting", onwait);
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
+
 
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("join-success", onjoin);
       socket.off("game_start", gameStart);
       socket.off("waiting", onwait);
     };
-  }, [router]);
+  }, [router,socket]);
 
   const joinRoom = () => {
     if (!roomid.trim()) return;
