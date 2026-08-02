@@ -67,6 +67,10 @@ app.prepare().then(() => {
         ? `Room full! Starting game with ${updatedCount} players.`
         : `${updatedCount}/${max_players} players in room`,
   });
+
+  socket.emit("turn",{
+    message:`  `
+  })
 });
 
     socket.on("disconnect", () => {
