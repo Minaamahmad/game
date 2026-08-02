@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState } from 'react'
+
  import { useSocket } from "@/Context/contextapi.js";
 
 const Startgame = () => {
@@ -10,19 +13,16 @@ const playerTurn=()=>{
 
   socket.emit("turn",turn,(res)=>{
 if (res.success) {
-        setError("")
         setTurn("")
-      } else {
-        setError(res.message || "Invalid move")
-      }
+      } else return
   })
 }
   return (
     <div>
-    <h1> Players have joined the room starting gamem</h1>
+    <h1> Players have joined the room starting game</h1>
 
-    <input type="text" value={turn}  onChange={(e)=>setTurn(e.target.value)}/>
-<button onClick={playerTurn}></button>
+    <input className='bg-white ' type="text"  value={turn}  onChange={(e)=>setTurn(e.target.value)}/>
+<button onClick={playerTurn}>Submit</button>
     <p></p>
     </div>
   )

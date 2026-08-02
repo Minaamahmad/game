@@ -68,10 +68,12 @@ app.prepare().then(() => {
         : `${updatedCount}/${max_players} players in room`,
   });
 
-  socket.emit("turn",{
-    message:`  `
-  })
 });
+socket.on("turn",(turn,callback)=>{
+  callback({success:true})
+  console.log(`player has used his ${turn}`)
+  
+})
 
     socket.on("disconnect", () => {
       console.log(" disconnected:", socket.id);
