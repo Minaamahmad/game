@@ -71,7 +71,7 @@ app.prepare().then(() => {
 });
 socket.on("turn",(turn,callback)=>{
   callback({success:true})
-  console.log(`player has used his ${turn}`)
+  console.log(`player used ${turn}`)
   
 })
 
