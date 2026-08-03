@@ -69,12 +69,22 @@ app.prepare().then(() => {
   });
 
 });
+
+// critical code 
+
 socket.on("turn",(turn,callback)=>{
+  
+  const verifyTurn=()=>{
+    const id=socket.id
+    if(id!==rooms[roomId]) return
+    
+  }
+  verifyTurn(turn)
   callback({success:true})
   console.log(`player used ${turn}`)
   
 })
-
+// rewrite
     socket.on("disconnect", () => {
       console.log(" disconnected:", socket.id);
     });
