@@ -79,8 +79,8 @@ socket.on("turn",(turn,callback)=>{
     if(id!==rooms[roomId]) return
     
   }
-  verifyTurn(turn)
   callback({success:true})
+  verifyTurn(turn)
   console.log(`player used ${turn}`)
   
 })
