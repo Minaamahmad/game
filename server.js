@@ -84,6 +84,9 @@ socket.on("turn",(turn,callback)=>{
   console.log(`player used ${turn}`)
   
 })
+socket.emit("roomdata",(callback)=>{
+  callback(rooms)
+})
 // rewrite
     socket.on("disconnect", () => {
       console.log(" disconnected:", socket.id);
