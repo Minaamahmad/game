@@ -68,6 +68,8 @@ app.prepare().then(() => {
         : `${updatedCount}/${max_players} players in room`,
   });
 
+   io.to(roomId).emit("roomdata", rooms[roomId]);
+
 });
 
 // critical code 
@@ -83,9 +85,6 @@ socket.on("turn",(turn,callback)=>{
   verifyTurn(turn)
   console.log(`player used ${turn}`)
   
-})
-socket.emit("roomdata",(callback)=>{
-  callback(rooms)
 })
 // rewrite
     socket.on("disconnect", () => {
