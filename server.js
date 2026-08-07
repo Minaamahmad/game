@@ -1,6 +1,17 @@
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
+import {
+  dealInitialState,
+  drawCard,
+  throwCard,
+  captureCards,
+  stealCard,
+  advanceTurn,
+  getResults,
+  isGameOver,
+  sweepRemainingTableCards,
+} from "./lib/gameEngine.js";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -8,13 +19,48 @@ const port = process.env.PORT || 3000;
 const MAX_PLAYERS = 4;
 
 const rooms = new Map();
+let io;
+
+function sanitizeGameStateForPlayer(gameState, viewerId) {
+  if (!gameState) return null;
+
+  const view = {
+    players: gameState.players,
+    turnIndex: gameState.turnIndex,
+    table: gameState.table,
+    captureStacks: gameState.captureStacks,
+    lastCapturerId: gameState.lastCapturerId,
+    deckCount: Array.isArray(gameState.deck) ? gameState.deck.length : 0,
+    hands: {},
+  };
+
+  if (viewerId && gameState.hands && gameState.hands[viewerId]) {
+    view.hands = {
+      [viewerId]: gameState.hands[viewerId],
+    };
+  }
+
+  return view;
+}
+
+function broadcastRoomGameState(roomId, room) {
+  if (!room || !room.gameState) return;
+
+  for (const socketId of room.players) {
+    const socket = io.sockets.sockets.get(socketId);
+    if (socket) {
+      const visibleState = sanitizeGameStateForPlayer(room.gameState, socketId);
+      socket.emit("game_state", visibleState);
+    }
+  }
+}
 
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
   const httpServer = createServer(handler);
-  const io = new Server(httpServer);
+  io = new Server(httpServer);
 
   io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
@@ -66,16 +112,147 @@ app.prepare().then(() => {
       const playerCount = room.players.length;
       const isFull = playerCount === MAX_PLAYERS;
 
-      if (isFull) room.started = true;
+      if (isFull) {
+        room.started = true;
+        room.gameState = dealInitialState(room.players);
+        room.turnIndex = room.gameState.turnIndex;
 
-      io.to(roomId).emit(isFull ? "game_start" : "waiting", {
-        players: playerCount,
-        message: isFull
-          ? `Room full! Starting game with ${playerCount} players.`
-          : `${playerCount}/${MAX_PLAYERS} players in room`,
-      });
+        io.to(roomId).emit("game_start", {
+          players: playerCount,
+          message: `Room full! Starting game with ${playerCount} players.`,
+        });
+
+        broadcastRoomGameState(roomId, room);
+      } else {
+        io.to(roomId).emit("waiting", {
+          players: playerCount,
+          message: `${playerCount}/${MAX_PLAYERS} players in room`,
+        });
+      }
 
       io.to(roomId).emit("roomdata", room.players);
+    });
+
+    socket.on("room:sync", (callback) => {
+      const roomId = socket.data.roomId;
+      const room = roomId ? rooms.get(roomId) : null;
+
+      if (!room) {
+        return callback?.({ success: false, error: "Not in a room" });
+      }
+
+      callback?.({
+        success: true,
+        roomId,
+        players: room.players,
+        started: Boolean(room.started),
+        gameState: room.gameState ? sanitizeGameStateForPlayer(room.gameState, socket.id) : null,
+      });
+    });
+
+    socket.on("game:draw", (callback) => {
+      const roomId = socket.data.roomId;
+      const room = roomId ? rooms.get(roomId) : null;
+
+      if (!room || !room.gameState) {
+        return callback?.({ success: false, error: "Game has not started" });
+      }
+
+      const nextState = drawCard(room.gameState);
+      if (nextState.success === false) {
+        return callback?.(nextState);
+      }
+
+      room.gameState = nextState;
+      broadcastRoomGameState(roomId, room);
+      callback?.({ success: true, gameState: sanitizeGameStateForPlayer(room.gameState, socket.id) });
+    });
+
+    socket.on("game:throw", (cardId, callback) => {
+      const roomId = socket.data.roomId;
+      const room = roomId ? rooms.get(roomId) : null;
+
+      if (!room || !room.gameState) {
+        return callback?.({ success: false, error: "Game has not started" });
+      }
+
+      const result = throwCard(room.gameState, socket.id, cardId);
+      if (result.success === false) {
+        return callback?.(result);
+      }
+
+      room.gameState = result;
+      room.gameState = advanceTurn(room.gameState);
+
+      if (isGameOver(room.gameState)) {
+        const lastTableSweep = sweepRemainingTableCards(room.gameState);
+        room.gameState = lastTableSweep;
+      }
+
+      broadcastRoomGameState(roomId, room);
+      callback?.({ success: true, gameState: sanitizeGameStateForPlayer(room.gameState, socket.id) });
+    });
+
+    socket.on("game:capture", (cardId, callback) => {
+      const roomId = socket.data.roomId;
+      const room = roomId ? rooms.get(roomId) : null;
+
+      if (!room || !room.gameState) {
+        return callback?.({ success: false, error: "Game has not started" });
+      }
+
+      const result = captureCards(room.gameState, socket.id, cardId);
+      if (result.success === false) {
+        return callback?.(result);
+      }
+
+      room.gameState = result;
+      room.gameState = advanceTurn(room.gameState);
+
+      if (isGameOver(room.gameState)) {
+        const lastTableSweep = sweepRemainingTableCards(room.gameState);
+        room.gameState = lastTableSweep;
+      }
+
+      broadcastRoomGameState(roomId, room);
+      callback?.({ success: true, gameState: sanitizeGameStateForPlayer(room.gameState, socket.id) });
+    });
+
+    socket.on("game:steal", (cardId, targetPlayerId, callback) => {
+      const roomId = socket.data.roomId;
+      const room = roomId ? rooms.get(roomId) : null;
+
+      if (!room || !room.gameState) {
+        return callback?.({ success: false, error: "Game has not started" });
+      }
+
+      const result = stealCard(room.gameState, socket.id, cardId, targetPlayerId);
+      if (result.success === false) {
+        return callback?.(result);
+      }
+
+      room.gameState = result;
+      room.gameState = advanceTurn(room.gameState);
+
+      if (isGameOver(room.gameState)) {
+        const lastTableSweep = sweepRemainingTableCards(room.gameState);
+        room.gameState = lastTableSweep;
+      }
+
+      broadcastRoomGameState(roomId, room);
+      callback?.({ success: true, gameState: sanitizeGameStateForPlayer(room.gameState, socket.id) });
+    });
+
+    socket.on("game:get_results", (callback) => {
+      const roomId = socket.data.roomId;
+      const room = roomId ? rooms.get(roomId) : null;
+
+      if (!room || !room.gameState) {
+        return callback?.({ success: false, error: "Game has not started" });
+      }
+
+      const result = getResults(room.gameState);
+      callback?.({ success: true, results: result });
     });
 
     // --- turn handling ---
@@ -91,8 +268,6 @@ app.prepare().then(() => {
       if (socket.id !== currentPlayerId) {
         return callback?.({ success: false, error: "Not your turn" });
       }
-
-   
 
       callback?.({ success: true });
 
