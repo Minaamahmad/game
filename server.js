@@ -164,6 +164,13 @@ app.prepare().then(() => {
       }
 
       room.gameState = nextState;
+      room.gameState = advanceTurn(room.gameState);
+
+      if (isGameOver(room.gameState)) {
+        const lastTableSweep = sweepRemainingTableCards(room.gameState);
+        room.gameState = lastTableSweep;
+      }
+
       broadcastRoomGameState(roomId, room);
       callback?.({ success: true, gameState: sanitizeGameStateForPlayer(room.gameState, socket.id) });
     });
@@ -203,11 +210,14 @@ app.prepare().then(() => {
 
       const result = captureCards(room.gameState, socket.id, cardId);
       if (result.success === false) {
+        if (result.error === "No matching table cards for this rank") {
+          room.gameState = advanceTurn(room.gameState);
+          broadcastRoomGameState(roomId, room);
+        }
         return callback?.(result);
       }
 
       room.gameState = result;
-      room.gameState = advanceTurn(room.gameState);
 
       if (isGameOver(room.gameState)) {
         const lastTableSweep = sweepRemainingTableCards(room.gameState);
@@ -228,11 +238,17 @@ app.prepare().then(() => {
 
       const result = stealCard(room.gameState, socket.id, cardId, targetPlayerId);
       if (result.success === false) {
+        if (
+          result.error === "Steal target top rank does not match played card rank" ||
+          result.error === "Steal target has no capture stack"
+        ) {
+          room.gameState = advanceTurn(room.gameState);
+          broadcastRoomGameState(roomId, room);
+        }
         return callback?.(result);
       }
 
       room.gameState = result;
-      room.gameState = advanceTurn(room.gameState);
 
       if (isGameOver(room.gameState)) {
         const lastTableSweep = sweepRemainingTableCards(room.gameState);
