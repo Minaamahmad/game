@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Capture Room
+
+Capture Room is a real-time browser card game inspired by classic capture-and-steal table-card mechanics. Players join a room, begin a 4-player match, and take turns drawing, throwing, capturing matching ranks from the table, or stealing the top card from another player's capture stack when the rank matches.
+
+The project is built with Next.js, React, and Socket.IO for multiplayer room synchronization.
+
+## Gameplay Overview
+
+The game uses a 52-card deck and a table-centered turn system:
+
+- Each player starts with a 4-card hand.
+- Four table cards are placed in the center at the start of the round.
+- The remaining deck acts as the draw source.
+- On a turn, a player may:
+  - draw a card from the shared deck;
+  - throw a card to the table;
+  - capture matching table cards by rank using a hand card;
+  - steal the top card from another player's capture stack when the played card rank matches the target stack's top rank.
+- The round ends when the deck is empty and every player has no cards left in hand.
+- The final table cards are swept into the last player who captured, and results are scored from capture stacks.
+
+## Features
+
+- Multiplayer room-based game flow with Socket.IO.
+- Real-time game state syncing to each connected client.
+- Responsive UI built with Next.js App Router and React.
+- Card engine with legal action support, scoring, turn progression, and end-of-game settlement.
+- Unit-style engine tests for dealing, capture, steal, scoring, and game-over behavior.
+
+## Project Structure
+
+```text
+app/                 Next.js App Router pages and UI flow
+components/          Reusable UI components
+Context/             Socket context provider and shared client state
+lib/                 Game rules, engine, and supporting logic
+server.js            HTTP server, Next.js integration, and Socket.IO rooms
+public/              Static assets
+test/                Game engine test coverage
+```
+
+## Tech Stack
+
+- Next.js 16
+- React 19
+- Socket.IO
+- Tailwind CSS
+- ESLint
+- Node.js test runner
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ recommended
+- npm
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open the app at:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Production Build
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Linting
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Testing
 
-## Deploy on Vercel
+The game engine includes test coverage for core rules. You can run the tests with:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+node --test
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## How to Play
+
+1. Start the server.
+2. Open the app in a browser.
+3. Enter a room code to join or create a room.
+4. When the room reaches 4 players, the match starts automatically.
+5. Play turns through the browser UI and watch synchronized changes from the server.
+
+## License
+
+This project is currently unlicensed. Add a license file if you want to publish it publicly on GitHub.
+
+## Roadmap
+
+Potential next improvements:
+
+- Better visual game board and card animations
+- Player name support and room lobby UX
+- Match history and replay state
+- Additional rules and configuration modes
+- Production deployment support for cloud hosting
