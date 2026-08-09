@@ -11,6 +11,7 @@ import {
   getResults,
   isGameOver,
   sweepRemainingTableCards,
+  getLegalActions,
 } from "./lib/gameEngine.js";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -207,8 +208,14 @@ app.prepare().then(() => {
       if (!room || !room.gameState) {
         return callback?.({ success: false, error: "Game has not started" });
       }
+room.gameState=result
+const actions =getLegalActions(rooms.gameState,active)
+const result = captureCards(room.gameState, socket.id, cardId);
+if(actions.capture.length===0&&actions.steal.length===0){
+  room.gameState=advanceTurn(room.gameState)
+            broadcastRoomGameState(roomId, room);
 
-      const result = captureCards(room.gameState, socket.id, cardId);
+}
       if (result.success === false) {
         if (result.error === "No matching table cards for this rank") {
           room.gameState = advanceTurn(room.gameState);
