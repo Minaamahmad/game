@@ -1,7 +1,31 @@
-const SUITS = ["♥", "♦", "♣", "♠"];
-const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+interface Card {
+  id:string,
+  rank: Rank,
+  suit:string,
+  points:number
+}
+interface Player {
+  id: string;
+  name: string;
+  hand: Card[];
+  // ...
+}
 
-const RANK_POINTS = {
+interface GameState {
+  players: string[];
+  turnIndex: number;
+  deck: Card[];
+  hands: Record<string, Card[]>;
+  table: Card[];
+  captureStacks: Record<string, Card[]>;
+  lastCapturerId: string | null;
+}
+const SUITS = ["♥", "♦", "♣", "♠"];
+const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"] as const 
+
+type Rank= typeof RANKS[number]
+
+const RANK_POINTS:Record<Rank,number> = {
   A: 20,
   "2": 5,
   "3": 5,
@@ -34,9 +58,9 @@ export function createDeck() {
   return deck;
 }
 
-export function shuffleDeck(deck) {
-  const copy = deck.map((card) => ({ ...card }));
-  const shuffled = [...copy];
+
+export function shuffleDeck(deck:Card[]):Card[] {
+  const shuffled = deck.map((card) => ({ ...card }));
 
   for (let i = shuffled.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -46,19 +70,19 @@ export function shuffleDeck(deck) {
   return shuffled;
 }
 
-function cloneState(gameState) {
+function cloneState(gameState:GameState) {
   return structuredClone(gameState);
 }
 
-export function dealInitialState(players) {
+export function dealInitialState(players:string[]) {
   if (!Array.isArray(players) || players.length === 0) {
     throw new Error("dealInitialState requires at least one player ID");
   }
 
   const baseDeck = shuffleDeck(createDeck());
 
-  const hands = {};
-  const captureStacks = {};
+  const hands:Record<string,Card[]> = {};
+  const captureStacks:Record<string,Card[]> = {};
 
   for (const playerId of players) {
     hands[playerId] = [];
@@ -68,20 +92,21 @@ export function dealInitialState(players) {
   const dealCount = 4;
   const tableCount = 4;
 
-  for (let i = 0; i < players.length; i += 1) {
-    const playerId = players[i];
+  for (const playerId of players) {
     for (let j = 0; j < dealCount; j += 1) {
-      hands[playerId].push(baseDeck.shift());
+      const card=baseDeck.shift()
+      if(card){
+        hands[playerId].push(card)
+      }
     }
   }
 
   const table = baseDeck.splice(0, tableCount);
-  const deck = [...baseDeck];
 
   return {
     players,
     turnIndex: 0,
-    deck,
+    deck: baseDeck,
     hands,
     table,
     captureStacks,
@@ -89,11 +114,11 @@ export function dealInitialState(players) {
   };
 }
 
-export function findMatchingTableCards(rank, tableCards) {
+export function findMatchingTableCards(rank:Rank, tableCards:Card[]):Card[] {
   return (tableCards || []).filter((card) => card.rank === rank);
 }
 
-export function drawCard(gameState) {
+export function drawCard(gameState:GameState) {
   if (!gameState || !Array.isArray(gameState.players) || gameState.players.length === 0) {
     return { success: false, error: "Invalid game state" };
   }
@@ -109,17 +134,19 @@ export function drawCard(gameState) {
     return { success: false, error: "No current player" };
   }
 
-  const drawnCard = nextState.deck.pop();
   if (!nextState.hands[currentPlayerId]) {
     nextState.hands[currentPlayerId] = [];
   }
 
-  nextState.hands[currentPlayerId].push(drawnCard);
+  const state = nextState.deck.pop();
+  if (state) {
+    nextState.hands[currentPlayerId].push(state);
+  }
 
   return nextState;
 }
 
-export function throwCard(gameState, playerId, cardId) {
+export function throwCard(gameState:GameState, playerId:string, cardId:string) {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -129,28 +156,21 @@ export function throwCard(gameState, playerId, cardId) {
     return { success: false, error: "Not this player's turn" };
   }
 
-  const hand = gameState.hands[playerId] || [];
-  const playedCardIndex = hand.findIndex((card) => card.id === cardId);
+  const nextState = cloneState(gameState as GameState);
+  const hand = nextState.hands[playerId] || [];
+  const cardIndex = hand.findIndex((card) => card.id === cardId);
 
-  if (playedCardIndex === -1) {
+  if (cardIndex === -1) {
     return { success: false, error: "Card is not in player's hand" };
   }
 
-  const nextState = cloneState(gameState);
-  const currentHand = nextState.hands[playerId] || [];
-  const playedCardIndexNext = currentHand.findIndex((card) => card.id === cardId);
-
-  if (playedCardIndexNext === -1) {
-    return { success: false, error: "Card is not in player's hand" };
-  }
-
-  const [playedCard] = currentHand.splice(playedCardIndexNext, 1);
+  const [playedCard] = hand.splice(cardIndex, 1);
   nextState.table.push(playedCard);
 
   return nextState;
 }
 
-export function captureCards(gameState, playerId, cardId) {
+export function captureCards(gameState:GameState, playerId:string, cardId:string) {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -173,33 +193,27 @@ export function captureCards(gameState, playerId, cardId) {
   }
 
   const nextState = cloneState(gameState);
-  const playerHand = nextState.hands[playerId] || [];
+  const playerHand = nextState.hands[playerId];
   const playerHandIndex = playerHand.findIndex((card) => card.id === cardId);
-
-  if (playerHandIndex === -1) {
-    return { success: false, error: "Card is not in player's hand" };
-  }
-
   const [removedPlayedCard] = playerHand.splice(playerHandIndex, 1);
-  const captured = [
-    ...matchingTableCards.map((tableCard) => ({ ...tableCard })),
-    { ...removedPlayedCard },
-  ];
 
   const tableMatchIds = new Set(matchingTableCards.map((card) => card.id));
-  nextState.table = (nextState.table || []).filter((card) => !tableMatchIds.has(card.id));
+  const captured = nextState.table.filter((card) => tableMatchIds.has(card.id));
+  captured.push(removedPlayedCard);
+
+  nextState.table = nextState.table.filter((card) => !tableMatchIds.has(card.id));
 
   if (!nextState.captureStacks[playerId]) {
     nextState.captureStacks[playerId] = [];
   }
 
-  nextState.captureStacks[playerId] = nextState.captureStacks[playerId].concat(captured);
+  nextState.captureStacks[playerId].push(...captured);
   nextState.lastCapturerId = playerId;
 
   return nextState;
 }
 
-export function stealCard(gameState, playerId, cardId, targetPlayerId) {
+export function stealCard(gameState:GameState, playerId:string, cardId:string, targetPlayerId:string) {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -209,7 +223,8 @@ export function stealCard(gameState, playerId, cardId, targetPlayerId) {
     return { success: false, error: "Not this player's turn" };
   }
 
-  if (!gameState.players.includes(targetPlayerId)) {
+  const targetPlayer = gameState.players.find((player) => player === targetPlayerId);
+  if (!targetPlayer) {
     return { success: false, error: "Invalid steal target" };
   }
 
@@ -235,27 +250,26 @@ export function stealCard(gameState, playerId, cardId, targetPlayerId) {
   }
 
   const nextState = cloneState(gameState);
-  const playerHand = nextState.hands[playerId] || [];
+  const playerHand = nextState.hands[playerId];
   const playerHandIndex = playerHand.findIndex((card) => card.id === cardId);
-
-  if (playerHandIndex === -1) {
-    return { success: false, error: "Card is not in player's hand" };
-  }
-
   const [removedPlayedCard] = playerHand.splice(playerHandIndex, 1);
   const targetTopCard = nextState.captureStacks[targetPlayerId].pop();
 
   if (!nextState.captureStacks[playerId]) {
     nextState.captureStacks[playerId] = [];
   }
+  if(targetTopCard){
 
-  nextState.captureStacks[playerId].push(targetTopCard, removedPlayedCard);
-  nextState.lastCapturerId = playerId;
+    nextState.captureStacks[playerId].push(targetTopCard, removedPlayedCard);
+    nextState.lastCapturerId = playerId;
+  }else{
+    nextState.captureStacks[playerId].push( removedPlayedCard);
+  }
 
   return nextState;
 }
 
-export function advanceTurn(gameState) {
+export function advanceTurn(gameState:GameState) {
   if (!gameState || !Array.isArray(gameState.players) || gameState.players.length === 0) {
     return { success: false, error: "Invalid game state" };
   }
@@ -265,7 +279,7 @@ export function advanceTurn(gameState) {
   return nextState;
 }
 
-export function isGameOver(gameState) {
+export function isGameOver(gameState:GameState) {
   if (!gameState || !Array.isArray(gameState.players)) {
     return false;
   }
@@ -279,7 +293,7 @@ export function isGameOver(gameState) {
   return deckEmpty && allHandsEmpty;
 }
 
-export function sweepRemainingTableCards(gameState) {
+export function sweepRemainingTableCards(gameState:GameState) {
   const nextState = cloneState(gameState);
 
   if (!nextState.table || nextState.table.length === 0) {
@@ -290,17 +304,17 @@ export function sweepRemainingTableCards(gameState) {
     return nextState;
   }
 
-  nextState.captureStacks[nextState.lastCapturerId] = nextState.captureStacks[nextState.lastCapturerId].concat(nextState.table);
+  nextState.captureStacks[nextState.lastCapturerId].push(...nextState.table);
   nextState.table = [];
 
   return nextState;
 }
 
-export function calculateScore(playerCaptureStack) {
+export function calculateScore(playerCaptureStack:Card[]) {
   return (playerCaptureStack || []).reduce((total, card) => total + (card.points || 0), 0);
 }
 
-export function getResults(gameState) {
+export function getResults(gameState:GameState) {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { scores: {}, winnerId: [] };
   }
@@ -308,8 +322,7 @@ export function getResults(gameState) {
   const scores = {};
 
   for (const playerId of gameState.players) {
-    const stack = gameState.captureStacks[playerId] || [];
-    scores[playerId] = calculateScore(stack);
+    scores[playerId] = calculateScore(gameState.captureStacks[playerId]);
   }
 
   const maxScore = Math.max(...Object.values(scores));
@@ -322,11 +335,7 @@ export function getResults(gameState) {
 }
 
 export function getLegalActions(gameState, playerId) {
-  const actions = {
-    throw: [],
-    capture: [],
-    steal: [],
-  };
+  const actions = { throw: [], capture: [], steal: [] };
 
   if (!gameState || !Array.isArray(gameState.players) || !gameState.players.includes(playerId)) {
     return actions;
@@ -340,41 +349,26 @@ export function getLegalActions(gameState, playerId) {
   const table = gameState.table || [];
 
   for (const card of hand) {
-    actions.throw.push({
-      cardId: card.id,
-      card,
-    });
+    actions.throw.push({ cardId: card.id, card });
 
     const captures = findMatchingTableCards(card.rank, table);
     if (captures.length > 0) {
-      actions.capture.push({
-        cardId: card.id,
-        card,
-        rank: card.rank,
-        matches: captures,
-      });
+      actions.capture.push({ cardId: card.id, card, rank: card.rank, matches: captures });
     }
 
-    const stealTargets = (gameState.players || [])
+    const stealTargets = gameState.players
       .filter((targetId) => targetId !== playerId)
-      .filter((targetId) => {
+      .map((targetId) => {
         const stack = gameState.captureStacks[targetId] || [];
-        return stack.length > 0 && stack[stack.length - 1].rank === card.rank;
+        const topCard = stack[stack.length - 1];
+        return topCard && topCard.rank === card.rank ? { targetPlayerId: targetId, topCard } : null;
       })
-      .map((targetId) => ({
-        targetPlayerId: targetId,
-        topCard: gameState.captureStacks[targetId][gameState.captureStacks[targetId].length - 1],
-      }));
+      .filter(Boolean);
 
     if (stealTargets.length > 0) {
-      actions.steal.push({
-        cardId: card.id,
-        card,
-        targets: stealTargets,
-      });
+      actions.steal.push({ cardId: card.id, card, targets: stealTargets });
     }
   }
 
   return actions;
 }
-
