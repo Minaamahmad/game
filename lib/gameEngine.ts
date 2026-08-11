@@ -319,7 +319,7 @@ export function getResults(gameState:GameState) {
     return { scores: {}, winnerId: [] };
   }
 
-  const scores = {};
+  const scores:Record<string,number> = {};
 
   for (const playerId of gameState.players) {
     scores[playerId] = calculateScore(gameState.captureStacks[playerId]);
@@ -333,9 +333,41 @@ export function getResults(gameState:GameState) {
     winnerId: tiedWinners.length === 1 ? tiedWinners[0] : tiedWinners,
   };
 }
+type ThrowAction = {
+  cardId: string;
+  card: Card;
+};
 
-export function getLegalActions(gameState, playerId) {
-  const actions = { throw: [], capture: [], steal: [] };
+
+type CaptureAction = {
+  cardId: string;
+  card: Card;
+  targetCards: Card[];
+  rank:Rank,
+
+  
+};
+type StealTarget = {
+  targetPlayerId: string;
+  topCard: Card;
+};
+
+type StealAction = {
+  cardId: string;
+  card: Card;
+  targetPlayerId: string;
+  targets:StealTarget[]
+};
+
+// 2. Define the container object type returned by getLegalActions
+export type LegalActions = {
+  throw: ThrowAction[];
+  capture: CaptureAction[];
+  steal: StealAction[];
+};
+
+export function getLegalActions(gameState:GameState, playerId:string) {
+  const actions:LegalActions = { throw:[], capture: [], steal: [] };
 
   if (!gameState || !Array.isArray(gameState.players) || !gameState.players.includes(playerId)) {
     return actions;
@@ -345,15 +377,17 @@ export function getLegalActions(gameState, playerId) {
     return actions;
   }
 
-  const hand = gameState.hands[playerId] || [];
-  const table = gameState.table || [];
+
+
+  const hand:Card[] = gameState.hands[playerId] || [];
+  const table:Card[] = gameState.table || [];
 
   for (const card of hand) {
-    actions.throw.push({ cardId: card.id, card });
+  actions.throw.push({ cardId: card.id, card }); 
 
     const captures = findMatchingTableCards(card.rank, table);
     if (captures.length > 0) {
-      actions.capture.push({ cardId: card.id, card, rank: card.rank, matches: captures });
+      actions.capture.push({ cardId: card.id, card, rank: card.rank, targetCards: captures });
     }
 
     const stealTargets = gameState.players
@@ -366,7 +400,7 @@ export function getLegalActions(gameState, playerId) {
       .filter(Boolean);
 
     if (stealTargets.length > 0) {
-      actions.steal.push({ cardId: card.id, card, targets: stealTargets });
+      actions.steal.push({ cardId: card.id, card, targets:stealTargets });
     }
   }
 
