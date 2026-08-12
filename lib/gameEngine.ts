@@ -350,8 +350,7 @@ type StealTarget = {
 type StealAction = {
   cardId: string;
   card: Card;
-  targetPlayerId: string;
-  targets:StealTarget[]
+  targets: StealTarget[];
 };
 
 // 2. Define the container object type returned by getLegalActions
