@@ -4,12 +4,7 @@ interface Card {
   suit:string,
   points:number
 }
-interface Player {
-  id: string;
-  name: string;
-  hand: Card[];
-  // ...
-}
+
 
 interface GameState {
   players: string[];
@@ -397,7 +392,7 @@ export function getLegalActions(gameState:GameState, playerId:string) {
         const topCard = stack[stack.length - 1];
         return topCard && topCard.rank === card.rank ? { targetPlayerId: targetId, topCard } : null;
       })
-      .filter(Boolean);
+      .filter((target): target is StealTarget => target !== null);
 
     if (stealTargets.length > 0) {
       actions.steal.push({ cardId: card.id, card, targets:stealTargets });
