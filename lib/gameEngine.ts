@@ -37,7 +37,7 @@ const RANK_POINTS:Record<Rank,number> = {
 };
 
 export function createDeck() {
-  const deck = [];
+  const deck:Card[] = [];
 
   for (const suit of SUITS) {
     for (const rank of RANKS) {

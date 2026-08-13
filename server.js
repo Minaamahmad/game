@@ -12,7 +12,7 @@ import {
   isGameOver,
   sweepRemainingTableCards,
   getLegalActions,
-} from "./lib/gameEngine.js";
+} from "./lib/gameEngine.ts";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -208,9 +208,10 @@ app.prepare().then(() => {
       if (!room || !room.gameState) {
         return callback?.({ success: false, error: "Game has not started" });
       }
+      
+      const result = captureCards(room.gameState, socket.id, cardId);
 room.gameState=result
-const actions =getLegalActions(rooms.gameState,active)
-const result = captureCards(room.gameState, socket.id, cardId);
+const actions =getLegalActions(rooms.gameState)
 if(actions.capture.length===0&&actions.steal.length===0){
   room.gameState=advanceTurn(room.gameState)
             broadcastRoomGameState(roomId, room);
