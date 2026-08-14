@@ -5,7 +5,6 @@ interface Card {
   points:number
 }
 
-
 interface GameState {
   players: string[];
   turnIndex: number;
@@ -65,8 +64,12 @@ export function shuffleDeck(deck:Card[]):Card[] {
   return shuffled;
 }
 
-function cloneState(gameState:GameState) {
-  return structuredClone(gameState);
+function cloneState(gameState: GameState): GameState {
+  if (typeof structuredClone === "function") {
+    return structuredClone(gameState);
+  }
+
+  return JSON.parse(JSON.stringify(gameState));
 }
 
 export function dealInitialState(players:string[]) {
@@ -160,6 +163,11 @@ export function throwCard(gameState:GameState, playerId:string, cardId:string) {
   }
 
   const [playedCard] = hand.splice(cardIndex, 1);
+
+  if (!playedCard) {
+    return { success: false, error: "Failed to remove card from hand" };
+  }
+
   nextState.table.push(playedCard);
 
   return nextState;
@@ -190,7 +198,16 @@ export function captureCards(gameState:GameState, playerId:string, cardId:string
   const nextState = cloneState(gameState);
   const playerHand = nextState.hands[playerId];
   const playerHandIndex = playerHand.findIndex((card) => card.id === cardId);
+
+  if (playerHandIndex === -1) {
+    return { success: false, error: "Card is not in player's hand" };
+  }
+
   const [removedPlayedCard] = playerHand.splice(playerHandIndex, 1);
+
+  if (!removedPlayedCard) {
+    return { success: false, error: "Failed to remove card from hand" };
+  }
 
   const tableMatchIds = new Set(matchingTableCards.map((card) => card.id));
   const captured = nextState.table.filter((card) => tableMatchIds.has(card.id));
@@ -247,18 +264,28 @@ export function stealCard(gameState:GameState, playerId:string, cardId:string, t
   const nextState = cloneState(gameState);
   const playerHand = nextState.hands[playerId];
   const playerHandIndex = playerHand.findIndex((card) => card.id === cardId);
+
+  if (playerHandIndex === -1) {
+    return { success: false, error: "Card is not in player's hand" };
+  }
+
   const [removedPlayedCard] = playerHand.splice(playerHandIndex, 1);
+
+  if (!removedPlayedCard) {
+    return { success: false, error: "Failed to remove card from hand" };
+  }
+
   const targetTopCard = nextState.captureStacks[targetPlayerId].pop();
 
   if (!nextState.captureStacks[playerId]) {
     nextState.captureStacks[playerId] = [];
   }
-  if(targetTopCard){
 
+  if (targetTopCard) {
     nextState.captureStacks[playerId].push(targetTopCard, removedPlayedCard);
     nextState.lastCapturerId = playerId;
-  }else{
-    nextState.captureStacks[playerId].push( removedPlayedCard);
+  } else {
+    nextState.captureStacks[playerId].push(removedPlayedCard);
   }
 
   return nextState;
