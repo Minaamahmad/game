@@ -35,6 +35,13 @@ const RANK_POINTS:Record<Rank,number> = {
   K: 10,
 };
 
+// Discriminated-union result type used by every mutating function so callers
+// can rely on `result.success` always being present and correctly narrowing
+// `result.state` (on success) vs `result.error` (on failure).
+type ActionResult<T> =
+  | { success: true; state: T }
+  | { success: false; error: string };
+
 export function createDeck() {
   const deck:Card[] = [];
 
@@ -72,7 +79,7 @@ function cloneState(gameState: GameState): GameState {
   return JSON.parse(JSON.stringify(gameState));
 }
 
-export function dealInitialState(players:string[]) {
+export function dealInitialState(players:string[]):GameState {
   if (!Array.isArray(players) || players.length === 0) {
     throw new Error("dealInitialState requires at least one player ID");
   }
@@ -116,7 +123,7 @@ export function findMatchingTableCards(rank:Rank, tableCards:Card[]):Card[] {
   return (tableCards || []).filter((card) => card.rank === rank);
 }
 
-export function drawCard(gameState:GameState) {
+export function drawCard(gameState:GameState):ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players) || gameState.players.length === 0) {
     return { success: false, error: "Invalid game state" };
   }
@@ -136,15 +143,15 @@ export function drawCard(gameState:GameState) {
     nextState.hands[currentPlayerId] = [];
   }
 
-  const state = nextState.deck.pop();
-  if (state) {
-    nextState.hands[currentPlayerId].push(state);
+  const drawn = nextState.deck.pop();
+  if (drawn) {
+    nextState.hands[currentPlayerId].push(drawn);
   }
 
-  return nextState;
+  return { success: true, state: nextState };
 }
 
-export function throwCard(gameState:GameState, playerId:string, cardId:string) {
+export function throwCard(gameState:GameState, playerId:string, cardId:string):ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -170,10 +177,10 @@ export function throwCard(gameState:GameState, playerId:string, cardId:string) {
 
   nextState.table.push(playedCard);
 
-  return nextState;
+  return { success: true, state: nextState };
 }
 
-export function captureCards(gameState:GameState, playerId:string, cardId:string) {
+export function captureCards(gameState:GameState, playerId:string, cardId:string):ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -222,10 +229,10 @@ export function captureCards(gameState:GameState, playerId:string, cardId:string
   nextState.captureStacks[playerId].push(...captured);
   nextState.lastCapturerId = playerId;
 
-  return nextState;
+  return { success: true, state: nextState };
 }
 
-export function stealCard(gameState:GameState, playerId:string, cardId:string, targetPlayerId:string) {
+export function stealCard(gameState:GameState, playerId:string, cardId:string, targetPlayerId:string):ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -288,17 +295,17 @@ export function stealCard(gameState:GameState, playerId:string, cardId:string, t
     nextState.captureStacks[playerId].push(removedPlayedCard);
   }
 
-  return nextState;
+  return { success: true, state: nextState };
 }
 
-export function advanceTurn(gameState:GameState) {
+export function advanceTurn(gameState:GameState):ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players) || gameState.players.length === 0) {
     return { success: false, error: "Invalid game state" };
   }
 
   const nextState = cloneState(gameState);
   nextState.turnIndex = (nextState.turnIndex + 1) % nextState.players.length;
-  return nextState;
+  return { success: true, state: nextState };
 }
 
 export function isGameOver(gameState:GameState) {
@@ -315,21 +322,25 @@ export function isGameOver(gameState:GameState) {
   return deckEmpty && allHandsEmpty;
 }
 
-export function sweepRemainingTableCards(gameState:GameState) {
+export function sweepRemainingTableCards(gameState:GameState):ActionResult<GameState> {
+  if (!gameState || !Array.isArray(gameState.players)) {
+    return { success: false, error: "Invalid game state" };
+  }
+
   const nextState = cloneState(gameState);
 
   if (!nextState.table || nextState.table.length === 0) {
-    return nextState;
+    return { success: true, state: nextState };
   }
 
   if (!nextState.lastCapturerId || !nextState.captureStacks[nextState.lastCapturerId]) {
-    return nextState;
+    return { success: true, state: nextState };
   }
 
   nextState.captureStacks[nextState.lastCapturerId].push(...nextState.table);
   nextState.table = [];
 
-  return nextState;
+  return { success: true, state: nextState };
 }
 
 export function calculateScore(playerCaptureStack:Card[]) {
