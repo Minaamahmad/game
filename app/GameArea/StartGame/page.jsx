@@ -16,16 +16,8 @@ function Card({
   isInteractive = false,
 }) {
   return (
-    <motion.div
-      layout
-      key={card?.id ?? "card"}
-      initial={{ opacity: 0, y: -8, scale: 0.92 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.78 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      onClick={(e) => {
-        if (onClick) onClick(e);
-      }}
+    <div
+      onClick={onClick}
       className={[
         "relative w-14 h-20 rounded-xl border shadow-xl bg-zinc-900 text-zinc-100 transition-all select-none",
         isInteractive ? "cursor-pointer hover:-translate-y-1 hover:border-cyan-400" : "",
@@ -39,12 +31,7 @@ function Card({
     >
       {faceDown ? (
         <div className="absolute inset-0 rounded-xl border border-cyan-300/60 bg-gradient-to-br from-cyan-900 to-slate-950 flex items-center justify-center">
-          <motion.div
-            className="absolute inset-1 rounded-lg border border-cyan-300/50"
-            animate={{ rotateY: 180 }}
-            transition={{ duration: 0.55, ease: "easeInOut" }}
-            style={{ transformStyle: "preserve-3d" }}
-          />
+          <div className="absolute inset-1 rounded-lg border border-cyan-300/50" />
           <span className="text-[10px] font-bold tracking-widest text-cyan-300">C</span>
         </div>
       ) : (
@@ -55,7 +42,7 @@ function Card({
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 
@@ -95,11 +82,21 @@ const Startgame = () => {
   const currentPlayerId = gameState?.players?.[gameState?.turnIndex] ?? null;
   const myId = socket?.id ?? null;
   const isMyTurn = currentPlayerId === myId;
-  const myHand = gameState?.hands?.[myId] ?? [];
+  const myHand = useMemo(
+    () => gameState?.hands?.[myId] ?? [],
+    [gameState, myId]
+  );
+  const selectedCard = useMemo(
+    () => myHand.find((c) => c.id === selectedCardId) ?? null,
+    [myHand, selectedCardId]
+  );
 
   // Reset selection whenever active turn changes
   useEffect(() => {
-    setSelectedCardId(null);
+    const timer = setTimeout(() => {
+      setSelectedCardId(null);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [gameState?.turnIndex, currentPlayerId]);
 
   const roomScore = useMemo(() => {
@@ -120,63 +117,59 @@ const Startgame = () => {
     });
   };
 
-const throwCard = (cardId) => {
-  if (!socket || !gameState || !cardId) return;
+  const throwCard = (cardId) => {
+    if (!socket || !gameState || !cardId) return;
 
-  socket.emit("game:throw", cardId, (response) => {
-    if (response?.success) {
-      setSelectedCardId(null); // Clear selection; let socket.on("game_state") handle UI update
-    } else {
-      console.warn(response?.error || "Throw failed");
-    }
-  });
-};
+    socket.emit("game:throw", cardId, (response) => {
+      if (response?.success) {
+        setSelectedCardId(null);
+      } else {
+        console.warn(response?.error || "Throw failed");
+      }
+    });
+  };
 
-const captureCard = (cardId) => {
-  if (!socket || !gameState || !cardId) return;
+  const captureCard = (cardId) => {
+    if (!socket || !gameState || !cardId) return;
 
-  socket.emit("game:capture", cardId, (response) => {
-    if (response?.success) {
-      setSelectedCardId(null);
-    } else {
-      console.warn(response?.error || "Capture failed");
-    }
-  });
-};
+    socket.emit("game:capture", cardId, (response) => {
+      if (response?.success) {
+        setSelectedCardId(null);
+      } else {
+        console.warn(response?.error || "Capture failed");
+      }
+    });
+  };
 
-const stealCard = (cardId, targetPlayerId) => {
-  if (!socket || !gameState || !cardId) return;
+  const stealCard = (cardId, targetPlayerId) => {
+    if (!socket || !gameState || !cardId) return;
 
-  socket.emit("game:steal", cardId, targetPlayerId, (response) => {
-    if (response?.success) {
-      setSelectedCardId(null);
-    } else {
-      console.warn(response?.error || "Steal failed");
-    }
-  });
-};
+    socket.emit("game:steal", cardId, targetPlayerId, (response) => {
+      if (response?.success) {
+        setSelectedCardId(null);
+      } else {
+        console.warn(response?.error || "Steal failed");
+      }
+    });
+  };
 
-  // Hand card selection
   const handleHandCardClick = (cardId) => {
     if (!isMyTurn) return;
     setSelectedCardId((prev) => (prev === cardId ? null : cardId));
   };
 
-  // Clicking on empty space in the table area throws the selected card
   const handleTableAreaClick = () => {
     if (selectedCardId && isMyTurn) {
       throwCard(selectedCardId);
     }
   };
 
-  // Clicking directly on a card on the table captures it
   const handleTableCardClick = (e) => {
     e.stopPropagation();
     if (!selectedCardId || !isMyTurn) return;
     captureCard(selectedCardId);
   };
 
-  // Steal cards from another player's stack
   const handleStackClick = (e, targetPlayerId) => {
     e.stopPropagation();
     if (!selectedCardId || !isMyTurn || targetPlayerId === myId) return;
@@ -195,7 +188,7 @@ const stealCard = (cardId, targetPlayerId) => {
           </div>
           <div className="flex gap-3">
             <button
-              className="rounded-xl border border-cyan-400/60 px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-cyan-400/10 disabled:opacity-50"
+              className="rounded-xl border border-cyan-400/60 px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-cyan-400/10 disabled:opacity-50 transition-colors"
               onClick={drawFromDeck}
               disabled={!gameState || !isMyTurn}
             >
@@ -205,28 +198,42 @@ const stealCard = (cardId, targetPlayerId) => {
         </div>
 
         {!gameState ? (
-          <div className="rounded-2xl border border-zinc-800 p-10 text-zinc-500">Waiting for game_state...</div>
+          <div className="rounded-2xl border border-zinc-800 p-10 text-zinc-500 text-center">
+            Waiting for game_state...
+          </div>
         ) : (
           <div className="space-y-6">
             {/* Players Status Header */}
             <section className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               {gameState.players?.map((playerId) => (
-                <div key={playerId} className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
+                <div
+                  key={playerId}
+                  className={`rounded-2xl border p-4 transition-all ${
+                    currentPlayerId === playerId
+                      ? "border-emerald-500/50 bg-emerald-950/20 shadow-lg shadow-emerald-500/5"
+                      : "border-zinc-800 bg-zinc-900/70"
+                  }`}
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-400 truncate max-w-[130px]">
                       {playerId === myId ? `${playerId} (You)` : playerId}
                     </span>
                     {currentPlayerId === playerId && (
-                      <span className="text-[10px] uppercase font-bold text-emerald-300">Turn</span>
+                      <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                        Turn
+                      </span>
                     )}
                   </div>
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex gap-2 items-baseline">
                     <span className="text-xl font-black text-cyan-300">{roomScore[playerId] ?? 0}</span>
-                    <span className="text-xs text-zinc-500 self-end">pts</span>
+                    <span className="text-xs text-zinc-500">pts</span>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {(gameState.captureStacks?.[playerId] ?? []).slice(-3).map((stackCard) => (
-                      <span key={stackCard.id} className="px-2 py-1 rounded-full text-[9px] bg-zinc-800 text-zinc-300">
+                      <span
+                        key={stackCard.id}
+                        className="px-2 py-1 rounded-full text-[9px] bg-zinc-800 text-zinc-300 font-mono"
+                      >
                         {stackCard.rank}{stackCard.suit}
                       </span>
                     ))}
@@ -242,16 +249,15 @@ const stealCard = (cardId, targetPlayerId) => {
                   <div className="text-xs uppercase tracking-[0.35em] text-zinc-500">Table</div>
                   <div className="text-sm text-zinc-300">
                     {selectedCardId && isMyTurn
-                      ? "Click anywhere on the empty table space to throw your card, or click a card to capture."
+                      ? "Click matching table card to capture, or empty table space to throw."
                       : `${gameState.table?.length ?? 0} face-up cards`}
                   </div>
                 </div>
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Deck {gameState.deckCount ?? 0}
+                  Deck: {gameState.deck?.length ?? gameState.deckCount ?? 0}
                 </div>
               </div>
 
-              {/* Clicking this area triggers handleTableAreaClick (throws card) */}
               <div
                 onClick={handleTableAreaClick}
                 className={`min-h-44 rounded-2xl border transition-all p-6 ${
@@ -262,26 +268,28 @@ const stealCard = (cardId, targetPlayerId) => {
               >
                 <div className="flex flex-wrap gap-4 min-h-28 items-center">
                   <AnimatePresence>
-                    {(gameState.table ?? []).map((card) => (
-                      <motion.div
-                        layout
-                        key={card.id}
-                        initial={{ opacity: 0, rotateY: -90 }}
-                        animate={{ opacity: 1, rotateY: 0 }}
-                        exit={{ opacity: 0, scale: 0.65 }}
-                        transition={{ duration: 0.25 }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Card
-                          card={card}
-                          isInteractive={Boolean(selectedCardId && isMyTurn)}
+                    {(gameState.table ?? []).map((card) => {
+                      const isMatchingRank = selectedCard && selectedCard.rank === card.rank;
+                      return (
+                        <motion.div
+                          layout
+                          key={card.id}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.6 }}
+                          transition={{ duration: 0.2 }}
                           onClick={handleTableCardClick}
-                        />
-                      </motion.div>
-                    ))}
+                        >
+                          <Card
+                            card={card}
+                            isInteractive={Boolean(selectedCardId && isMyTurn)}
+                            isSelected={Boolean(isMatchingRank && isMyTurn)}
+                          />
+                        </motion.div>
+                      );
+                    })}
                   </AnimatePresence>
 
-                  {/* Visual Drop Hint inside empty table space when card selected */}
                   {selectedCardId && isMyTurn && (
                     <div className="flex items-center justify-center border-2 border-dashed border-amber-400/40 rounded-xl w-14 h-20 text-amber-300/60 text-[10px] font-bold uppercase tracking-wider text-center p-1 pointer-events-none">
                       Throw Here
@@ -300,23 +308,23 @@ const stealCard = (cardId, targetPlayerId) => {
                     <div className="text-sm text-zinc-300">
                       {isMyTurn
                         ? selectedCardId
-                          ? "Card selected. Click table empty space to throw."
+                          ? "Card selected. Click table to throw or capture."
                           : "Click a card to select it"
                         : "Waiting for your turn..."}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-4 pt-2">
+                <div className="flex flex-wrap gap-4 pt-2 min-h-24">
                   <AnimatePresence mode="popLayout">
                     {(myHand || []).map((card) => (
                       <motion.div
                         layout
                         key={card.id}
-                        variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-                        initial="hidden"
-                        animate="visible"
-                        exit="hidden"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
                       >
                         <Card
                           card={card}
@@ -334,36 +342,48 @@ const stealCard = (cardId, targetPlayerId) => {
               <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-6">
                 <div className="text-xs uppercase tracking-[0.35em] text-zinc-500 mb-4">Capture Stacks</div>
                 <div className="space-y-4">
-                  {(gameState.players ?? []).map((playerId) => (
-                    <div
-                      key={playerId}
-                      onClick={(e) => handleStackClick(e, playerId)}
-                      className={`rounded-2xl border p-3 transition-colors ${
-                        selectedCardId && isMyTurn && playerId !== myId
-                          ? "border-rose-500/50 bg-rose-500/10 cursor-pointer hover:border-rose-400"
-                          : "border-zinc-800"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-                          {playerId === myId ? `${playerId} (You)` : playerId}{" "}
-                          {playerId !== myId && selectedCardId && isMyTurn ? "(Click to Steal)" : ""}
-                        </span>
-                        <span className="text-[10px] text-zinc-500">
-                          {(gameState.captureStacks?.[playerId] ?? []).length} cards
-                        </span>
+                  {(gameState.players ?? []).map((playerId) => {
+                    const stack = gameState.captureStacks?.[playerId] ?? [];
+                    const topCard = stack[stack.length - 1];
+                    const canSteal =
+                      selectedCard &&
+                      topCard &&
+                      selectedCard.rank === topCard.rank &&
+                      playerId !== myId;
+
+                    return (
+                      <div
+                        key={playerId}
+                        onClick={(e) => handleStackClick(e, playerId)}
+                        className={`rounded-2xl border p-3 transition-colors ${
+                          canSteal && isMyTurn
+                            ? "border-rose-500/80 bg-rose-500/10 cursor-pointer hover:border-rose-400"
+                            : "border-zinc-800"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 truncate max-w-[180px]">
+                            {playerId === myId ? `${playerId} (You)` : playerId}{" "}
+                            {canSteal && isMyTurn ? "(Click to Steal!)" : ""}
+                          </span>
+                          <span className="text-[10px] text-zinc-500">{stack.length} cards</span>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <AnimatePresence>
+                            {stack.slice(-4).map((stackCard, idx) => (
+                              <motion.div
+                                layout
+                                key={`${playerId}-${stackCard.id}-${idx}`}
+                                className="relative"
+                              >
+                                <Card card={stackCard} className="w-11 h-16 text-[10px]" />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </div>
                       </div>
-                      <div className="mt-3 flex gap-2">
-                        <AnimatePresence>
-                          {(gameState.captureStacks?.[playerId] ?? []).slice(-4).map((stackCard, idx) => (
-                            <motion.div layout key={`${playerId}-${stackCard.id}-${idx}`} className="relative">
-                              <Card card={stackCard} className="w-11 h-16" />
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             </section>
