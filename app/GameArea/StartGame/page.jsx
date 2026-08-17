@@ -23,7 +23,9 @@ function Card({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.78 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      onClick={onClick}
+      onClick={(e) => {
+        if (onClick) onClick(e);
+      }}
       className={[
         "relative w-14 h-20 rounded-xl border shadow-xl bg-zinc-900 text-zinc-100 transition-all select-none",
         isInteractive ? "cursor-pointer hover:-translate-y-1 hover:border-cyan-400" : "",
@@ -107,9 +109,8 @@ const Startgame = () => {
     if (!socket || !gameState) return;
 
     socket.emit("game:draw", (response) => {
-      if (response?.success && response.gameState) {
-        setGameState(response.gameState);
-      } else {
+      if (response?.success) {
+    
         console.warn(response?.error || "Draw failed");
       }
     });
@@ -154,25 +155,26 @@ const Startgame = () => {
     });
   };
 
-  // Click handlers for card interactions
+  // Click handlers
   const handleHandCardClick = (cardId) => {
     if (!isMyTurn) return;
     setSelectedCardId((prev) => (prev === cardId ? null : cardId));
   };
 
-  const handleTableCardClick = () => {
+  const handleTableCardClick = (e) => {
+    e.stopPropagation(); // Stop event from triggering handleTableAreaClick
     if (!selectedCardId || !isMyTurn) return;
     captureCard(selectedCardId);
   };
 
   const handleTableAreaClick = (e) => {
-    // Only throw if clicking the background area of table, not a card directly
     if (e.target === e.currentTarget && selectedCardId && isMyTurn) {
       throwCard(selectedCardId);
     }
   };
 
-  const handleStackClick = (targetPlayerId) => {
+  const handleStackClick = (e, targetPlayerId) => {
+    e.stopPropagation();
     if (!selectedCardId || !isMyTurn || targetPlayerId === myId) return;
     stealCard(selectedCardId, targetPlayerId);
   };
@@ -184,7 +186,7 @@ const Startgame = () => {
           <div>
             <h1 className="text-2xl font-black uppercase tracking-widest text-cyan-300">Cassino Table</h1>
             <div className="text-xs uppercase tracking-[0.28em] text-zinc-500">
-              {gameState ? `Room: ${gameState.players?.join(" / ")}` : "Waiting for room"}
+              {gameState ? `Room Code: ${gameState.roomId || "In Game"}` : "Waiting for room"}
             </div>
           </div>
           <div className="flex gap-3">
@@ -206,7 +208,9 @@ const Startgame = () => {
               {gameState.players?.map((playerId) => (
                 <div key={playerId} className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">{playerId}</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      {playerId === myId ? `${playerId} (You)` : playerId}
+                    </span>
                     {currentPlayerId === playerId && <span className="text-[10px] uppercase text-emerald-300">Turn</span>}
                   </div>
                   <div className="mt-4 flex gap-2">
@@ -315,7 +319,7 @@ const Startgame = () => {
                   {(gameState.players ?? []).map((playerId) => (
                     <div
                       key={playerId}
-                      onClick={() => handleStackClick(playerId)}
+                      onClick={(e) => handleStackClick(e, playerId)}
                       className={`rounded-2xl border p-3 transition-colors ${
                         selectedCardId && isMyTurn && playerId !== myId
                           ? "border-rose-500/50 bg-rose-500/10 cursor-pointer hover:border-rose-400"
@@ -324,7 +328,8 @@ const Startgame = () => {
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-                          {playerId} {playerId !== myId && selectedCardId && isMyTurn ? "(Click to Steal)" : ""}
+                          {playerId === myId ? `${playerId} (You)` : playerId}{" "}
+                          {playerId !== myId && selectedCardId && isMyTurn ? "(Click to Steal)" : ""}
                         </span>
                         <span className="text-[10px] text-zinc-500">
                           {(gameState.captureStacks?.[playerId] ?? []).length} cards
