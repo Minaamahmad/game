@@ -120,44 +120,41 @@ const Startgame = () => {
     });
   };
 
-  const throwCard = (cardId) => {
-    if (!socket || !gameState || !cardId) return;
+const throwCard = (cardId) => {
+  if (!socket || !gameState || !cardId) return;
 
-    socket.emit("game:throw", cardId, (response) => {
-      if (response?.success && response.gameState) {
-        setGameState(response.gameState);
-        setSelectedCardId(null);
-      } else {
-        console.warn(response?.error || "Throw failed");
-      }
-    });
-  };
+  socket.emit("game:throw", cardId, (response) => {
+    if (response?.success) {
+      setSelectedCardId(null); // Clear selection; let socket.on("game_state") handle UI update
+    } else {
+      console.warn(response?.error || "Throw failed");
+    }
+  });
+};
 
-  const captureCard = (cardId) => {
-    if (!socket || !gameState || !cardId) return;
+const captureCard = (cardId) => {
+  if (!socket || !gameState || !cardId) return;
 
-    socket.emit("game:capture", cardId, (response) => {
-      if (response?.success && response.gameState) {
-        setGameState(response.gameState);
-        setSelectedCardId(null);
-      } else {
-        console.warn(response?.error || "Capture failed");
-      }
-    });
-  };
+  socket.emit("game:capture", cardId, (response) => {
+    if (response?.success) {
+      setSelectedCardId(null);
+    } else {
+      console.warn(response?.error || "Capture failed");
+    }
+  });
+};
 
-  const stealCard = (cardId, targetPlayerId) => {
-    if (!socket || !gameState || !cardId) return;
+const stealCard = (cardId, targetPlayerId) => {
+  if (!socket || !gameState || !cardId) return;
 
-    socket.emit("game:steal", cardId, targetPlayerId, (response) => {
-      if (response?.success && response.gameState) {
-        setGameState(response.gameState);
-        setSelectedCardId(null);
-      } else {
-        console.warn(response?.error || "Steal failed");
-      }
-    });
-  };
+  socket.emit("game:steal", cardId, targetPlayerId, (response) => {
+    if (response?.success) {
+      setSelectedCardId(null);
+    } else {
+      console.warn(response?.error || "Steal failed");
+    }
+  });
+};
 
   // Hand card selection
   const handleHandCardClick = (cardId) => {

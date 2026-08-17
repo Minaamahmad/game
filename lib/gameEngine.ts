@@ -1,8 +1,8 @@
 interface Card {
-  id:string,
-  rank: Rank,
-  suit:string,
-  points:number
+  id: string;
+  rank: Rank;
+  suit: string;
+  points: number;
 }
 
 interface GameState {
@@ -14,12 +14,13 @@ interface GameState {
   captureStacks: Record<string, Card[]>;
   lastCapturerId: string | null;
 }
+
 const SUITS = ["♥", "♦", "♣", "♠"];
-const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"] as const 
+const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"] as const;
 
-type Rank= typeof RANKS[number]
+type Rank = typeof RANKS[number];
 
-const RANK_POINTS:Record<Rank,number> = {
+const RANK_POINTS: Record<Rank, number> = {
   A: 20,
   "2": 5,
   "3": 5,
@@ -35,15 +36,12 @@ const RANK_POINTS:Record<Rank,number> = {
   K: 10,
 };
 
-// Discriminated-union result type used by every mutating function so callers
-// can rely on `result.success` always being present and correctly narrowing
-// `result.state` (on success) vs `result.error` (on failure).
 type ActionResult<T> =
   | { success: true; state: T }
   | { success: false; error: string };
 
-export function createDeck() {
-  const deck:Card[] = [];
+export function createDeck(): Card[] {
+  const deck: Card[] = [];
 
   for (const suit of SUITS) {
     for (const rank of RANKS) {
@@ -59,8 +57,7 @@ export function createDeck() {
   return deck;
 }
 
-
-export function shuffleDeck(deck:Card[]):Card[] {
+export function shuffleDeck(deck: Card[]): Card[] {
   const shuffled = deck.map((card) => ({ ...card }));
 
   for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -79,15 +76,15 @@ function cloneState(gameState: GameState): GameState {
   return JSON.parse(JSON.stringify(gameState));
 }
 
-export function dealInitialState(players:string[]):GameState {
+export function dealInitialState(players: string[]): GameState {
   if (!Array.isArray(players) || players.length === 0) {
     throw new Error("dealInitialState requires at least one player ID");
   }
 
   const baseDeck = shuffleDeck(createDeck());
 
-  const hands:Record<string,Card[]> = {};
-  const captureStacks:Record<string,Card[]> = {};
+  const hands: Record<string, Card[]> = {};
+  const captureStacks: Record<string, Card[]> = {};
 
   for (const playerId of players) {
     hands[playerId] = [];
@@ -99,9 +96,9 @@ export function dealInitialState(players:string[]):GameState {
 
   for (const playerId of players) {
     for (let j = 0; j < dealCount; j += 1) {
-      const card=baseDeck.shift()
-      if(card){
-        hands[playerId].push(card)
+      const card = baseDeck.shift();
+      if (card) {
+        hands[playerId].push(card);
       }
     }
   }
@@ -119,7 +116,7 @@ export function dealInitialState(players:string[]):GameState {
   };
 }
 
-export function findMatchingTableCards(rank:Rank, tableCards:Card[]):Card[] {
+export function findMatchingTableCards(rank: Rank, tableCards: Card[]): Card[] {
   return (tableCards || []).filter((card) => card.rank === rank);
 }
 
@@ -135,7 +132,6 @@ export function drawCard(gameState: GameState): ActionResult<GameState> {
   const nextState = cloneState(gameState);
   const CARDS_PER_PLAYER = 4;
 
-  // Deal 4 cards to each player
   for (const playerId of nextState.players) {
     if (!nextState.hands[playerId]) {
       nextState.hands[playerId] = [];
@@ -147,7 +143,7 @@ export function drawCard(gameState: GameState): ActionResult<GameState> {
   return { success: true, state: nextState };
 }
 
-export function throwCard(gameState:GameState, playerId:string, cardId:string):ActionResult<GameState> {
+export function throwCard(gameState: GameState, playerId: string, cardId: string): ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -157,7 +153,7 @@ export function throwCard(gameState:GameState, playerId:string, cardId:string):A
     return { success: false, error: "Not this player's turn" };
   }
 
-  const nextState = cloneState(gameState as GameState);
+  const nextState = cloneState(gameState);
   const hand = nextState.hands[playerId] || [];
   const cardIndex = hand.findIndex((card) => card.id === cardId);
 
@@ -176,7 +172,7 @@ export function throwCard(gameState:GameState, playerId:string, cardId:string):A
   return { success: true, state: nextState };
 }
 
-export function captureCards(gameState:GameState, playerId:string, cardId:string):ActionResult<GameState> {
+export function captureCards(gameState: GameState, playerId: string, cardId: string): ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -228,7 +224,12 @@ export function captureCards(gameState:GameState, playerId:string, cardId:string
   return { success: true, state: nextState };
 }
 
-export function stealCard(gameState:GameState, playerId:string, cardId:string, targetPlayerId:string):ActionResult<GameState> {
+export function stealCard(
+  gameState: GameState,
+  playerId: string,
+  cardId: string,
+  targetPlayerId: string
+): ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -294,7 +295,7 @@ export function stealCard(gameState:GameState, playerId:string, cardId:string, t
   return { success: true, state: nextState };
 }
 
-export function advanceTurn(gameState:GameState):ActionResult<GameState> {
+export function advanceTurn(gameState: GameState): ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players) || gameState.players.length === 0) {
     return { success: false, error: "Invalid game state" };
   }
@@ -304,7 +305,7 @@ export function advanceTurn(gameState:GameState):ActionResult<GameState> {
   return { success: true, state: nextState };
 }
 
-export function isGameOver(gameState:GameState) {
+export function isGameOver(gameState: GameState): boolean {
   if (!gameState || !Array.isArray(gameState.players)) {
     return false;
   }
@@ -318,7 +319,7 @@ export function isGameOver(gameState:GameState) {
   return deckEmpty && allHandsEmpty;
 }
 
-export function sweepRemainingTableCards(gameState:GameState):ActionResult<GameState> {
+export function sweepRemainingTableCards(gameState: GameState): ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players)) {
     return { success: false, error: "Invalid game state" };
   }
@@ -339,16 +340,16 @@ export function sweepRemainingTableCards(gameState:GameState):ActionResult<GameS
   return { success: true, state: nextState };
 }
 
-export function calculateScore(playerCaptureStack:Card[]) {
+export function calculateScore(playerCaptureStack: Card[]): number {
   return (playerCaptureStack || []).reduce((total, card) => total + (card.points || 0), 0);
 }
 
-export function getResults(gameState:GameState) {
-  if (!gameState || !Array.isArray(gameState.players)) {
+export function getResults(gameState: GameState) {
+  if (!gameState || !Array.isArray(gameState.players) || gameState.players.length === 0) {
     return { scores: {}, winnerId: [] };
   }
 
-  const scores:Record<string,number> = {};
+  const scores: Record<string, number> = {};
 
   for (const playerId of gameState.players) {
     scores[playerId] = calculateScore(gameState.captureStacks[playerId]);
@@ -362,20 +363,19 @@ export function getResults(gameState:GameState) {
     winnerId: tiedWinners.length === 1 ? tiedWinners[0] : tiedWinners,
   };
 }
+
 type ThrowAction = {
   cardId: string;
   card: Card;
 };
 
-
 type CaptureAction = {
   cardId: string;
   card: Card;
   targetCards: Card[];
-  rank:Rank,
-
-  
+  rank: Rank;
 };
+
 type StealTarget = {
   targetPlayerId: string;
   topCard: Card;
@@ -387,15 +387,14 @@ type StealAction = {
   targets: StealTarget[];
 };
 
-// 2. Define the container object type returned by getLegalActions
 export type LegalActions = {
   throw: ThrowAction[];
   capture: CaptureAction[];
   steal: StealAction[];
 };
 
-export function getLegalActions(gameState:GameState, playerId:string) {
-  const actions:LegalActions = { throw:[], capture: [], steal: [] };
+export function getLegalActions(gameState: GameState, playerId: string): LegalActions {
+  const actions: LegalActions = { throw: [], capture: [], steal: [] };
 
   if (!gameState || !Array.isArray(gameState.players) || !gameState.players.includes(playerId)) {
     return actions;
@@ -405,13 +404,11 @@ export function getLegalActions(gameState:GameState, playerId:string) {
     return actions;
   }
 
-
-
-  const hand:Card[] = gameState.hands[playerId] || [];
-  const table:Card[] = gameState.table || [];
+  const hand: Card[] = gameState.hands[playerId] || [];
+  const table: Card[] = gameState.table || [];
 
   for (const card of hand) {
-  actions.throw.push({ cardId: card.id, card }); 
+    actions.throw.push({ cardId: card.id, card });
 
     const captures = findMatchingTableCards(card.rank, table);
     if (captures.length > 0) {
@@ -428,7 +425,7 @@ export function getLegalActions(gameState:GameState, playerId:string) {
       .filter((target): target is StealTarget => target !== null);
 
     if (stealTargets.length > 0) {
-      actions.steal.push({ cardId: card.id, card, targets:stealTargets });
+      actions.steal.push({ cardId: card.id, card, targets: stealTargets });
     }
   }
 

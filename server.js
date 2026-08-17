@@ -11,7 +11,6 @@ import {
   getResults,
   isGameOver,
   sweepRemainingTableCards,
-  getLegalActions,
 } from "./lib/gameEngine.ts";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -140,7 +139,6 @@ app.prepare().then(() => {
 
       // Handle re-joining an in-progress game
       if (room.started) {
-        // If player was disconnected during game, attempt migration
         const stalePlayerId = room.players.find((id) => !io.sockets.sockets.has(id));
         if (stalePlayerId) {
           migratePlayerSocket(room, stalePlayerId, socket.id);
@@ -289,7 +287,6 @@ app.prepare().then(() => {
       const room = rooms.get(roomId);
       if (!room) return;
 
-      // If game is in progress, do not immediately destroy the state; give a grace period for reconnection
       if (room.started) {
         io.to(roomId).emit("player-disconnected", { playerId: socket.id });
         return;
