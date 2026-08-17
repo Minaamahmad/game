@@ -123,7 +123,7 @@ export function findMatchingTableCards(rank:Rank, tableCards:Card[]):Card[] {
   return (tableCards || []).filter((card) => card.rank === rank);
 }
 
-export function drawCard(gameState:GameState):ActionResult<GameState> {
+export function drawCard(gameState: GameState): ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players) || gameState.players.length === 0) {
     return { success: false, error: "Invalid game state" };
   }
@@ -133,19 +133,15 @@ export function drawCard(gameState:GameState):ActionResult<GameState> {
   }
 
   const nextState = cloneState(gameState);
-  const currentPlayerId = nextState.players[nextState.turnIndex];
+  const CARDS_PER_PLAYER = 4;
 
-  if (!currentPlayerId) {
-    return { success: false, error: "No current player" };
-  }
-
-  if (!nextState.hands[currentPlayerId]) {
-    nextState.hands[currentPlayerId] = [];
-  }
-
-  const drawn = nextState.deck.pop();
-  if (drawn) {
-    nextState.hands[currentPlayerId].push(drawn);
+  // Deal 4 cards to each player
+  for (const playerId of nextState.players) {
+    if (!nextState.hands[playerId]) {
+      nextState.hands[playerId] = [];
+    }
+    const dealtCards = nextState.deck.splice(0, CARDS_PER_PLAYER);
+    nextState.hands[playerId].push(...dealtCards);
   }
 
   return { success: true, state: nextState };

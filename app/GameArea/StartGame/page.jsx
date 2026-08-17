@@ -97,6 +97,11 @@ const Startgame = () => {
   const isMyTurn = currentPlayerId === myId;
   const myHand = gameState?.hands?.[myId] ?? [];
 
+  // Reset selection whenever active turn changes
+  useEffect(() => {
+    setSelectedCardId(null);
+  }, [gameState?.turnIndex, currentPlayerId]);
+
   const roomScore = useMemo(() => {
     if (!gameState?.captureStacks) return {};
     return Object.entries(gameState.captureStacks).reduce((acc, [playerId, stack]) => {
@@ -109,15 +114,14 @@ const Startgame = () => {
     if (!socket || !gameState) return;
 
     socket.emit("game:draw", (response) => {
-      if (response?.success) {
-    
+      if (!response?.success) {
         console.warn(response?.error || "Draw failed");
       }
     });
   };
 
   const throwCard = (cardId) => {
-    if (!socket || !gameState) return;
+    if (!socket || !gameState || !cardId) return;
 
     socket.emit("game:throw", cardId, (response) => {
       if (response?.success && response.gameState) {
@@ -130,7 +134,7 @@ const Startgame = () => {
   };
 
   const captureCard = (cardId) => {
-    if (!socket || !gameState) return;
+    if (!socket || !gameState || !cardId) return;
 
     socket.emit("game:capture", cardId, (response) => {
       if (response?.success && response.gameState) {
@@ -143,7 +147,7 @@ const Startgame = () => {
   };
 
   const stealCard = (cardId, targetPlayerId) => {
-    if (!socket || !gameState) return;
+    if (!socket || !gameState || !cardId) return;
 
     socket.emit("game:steal", cardId, targetPlayerId, (response) => {
       if (response?.success && response.gameState) {
@@ -155,24 +159,27 @@ const Startgame = () => {
     });
   };
 
-  // Click handlers
+  // Hand card selection
   const handleHandCardClick = (cardId) => {
     if (!isMyTurn) return;
     setSelectedCardId((prev) => (prev === cardId ? null : cardId));
   };
 
-  const handleTableCardClick = (e) => {
-    e.stopPropagation(); // Stop event from triggering handleTableAreaClick
-    if (!selectedCardId || !isMyTurn) return;
-    captureCard(selectedCardId);
-  };
-
-  const handleTableAreaClick = (e) => {
-    if (e.target === e.currentTarget && selectedCardId && isMyTurn) {
+  // Clicking on empty space in the table area throws the selected card
+  const handleTableAreaClick = () => {
+    if (selectedCardId && isMyTurn) {
       throwCard(selectedCardId);
     }
   };
 
+  // Clicking directly on a card on the table captures it
+  const handleTableCardClick = (e) => {
+    e.stopPropagation();
+    if (!selectedCardId || !isMyTurn) return;
+    captureCard(selectedCardId);
+  };
+
+  // Steal cards from another player's stack
   const handleStackClick = (e, targetPlayerId) => {
     e.stopPropagation();
     if (!selectedCardId || !isMyTurn || targetPlayerId === myId) return;
@@ -204,6 +211,7 @@ const Startgame = () => {
           <div className="rounded-2xl border border-zinc-800 p-10 text-zinc-500">Waiting for game_state...</div>
         ) : (
           <div className="space-y-6">
+            {/* Players Status Header */}
             <section className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               {gameState.players?.map((playerId) => (
                 <div key={playerId} className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
@@ -211,7 +219,9 @@ const Startgame = () => {
                     <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
                       {playerId === myId ? `${playerId} (You)` : playerId}
                     </span>
-                    {currentPlayerId === playerId && <span className="text-[10px] uppercase text-emerald-300">Turn</span>}
+                    {currentPlayerId === playerId && (
+                      <span className="text-[10px] uppercase font-bold text-emerald-300">Turn</span>
+                    )}
                   </div>
                   <div className="mt-4 flex gap-2">
                     <span className="text-xl font-black text-cyan-300">{roomScore[playerId] ?? 0}</span>
@@ -228,14 +238,14 @@ const Startgame = () => {
               ))}
             </section>
 
-            {/* Table Area */}
+            {/* Table Drop Zone Area */}
             <section className="rounded-3xl border border-cyan-400/30 bg-zinc-900/60 p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <div className="text-xs uppercase tracking-[0.35em] text-zinc-500">Table</div>
                   <div className="text-sm text-zinc-300">
-                    {selectedCardId
-                      ? "Click a table card to match/capture, or click background to throw card"
+                    {selectedCardId && isMyTurn
+                      ? "Click anywhere on the empty table space to throw your card, or click a card to capture."
                       : `${gameState.table?.length ?? 0} face-up cards`}
                   </div>
                 </div>
@@ -244,13 +254,16 @@ const Startgame = () => {
                 </div>
               </div>
 
+              {/* Clicking this area triggers handleTableAreaClick (throws card) */}
               <div
                 onClick={handleTableAreaClick}
-                className={`min-h-34 rounded-2xl border transition-colors p-4 ${
-                  selectedCardId ? "border-amber-400/50 bg-amber-500/5 cursor-pointer" : "border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-900"
+                className={`min-h-44 rounded-2xl border transition-all p-6 ${
+                  selectedCardId && isMyTurn
+                    ? "border-amber-400/80 bg-amber-500/10 cursor-pointer shadow-lg shadow-amber-500/5 ring-1 ring-amber-400/30"
+                    : "border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-900"
                 }`}
               >
-                <div className="flex flex-wrap gap-3 pointer-events-auto">
+                <div className="flex flex-wrap gap-4 min-h-28 items-center">
                   <AnimatePresence>
                     {(gameState.table ?? []).map((card) => (
                       <motion.div
@@ -260,6 +273,7 @@ const Startgame = () => {
                         animate={{ opacity: 1, rotateY: 0 }}
                         exit={{ opacity: 0, scale: 0.65 }}
                         transition={{ duration: 0.25 }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <Card
                           card={card}
@@ -269,6 +283,13 @@ const Startgame = () => {
                       </motion.div>
                     ))}
                   </AnimatePresence>
+
+                  {/* Visual Drop Hint inside empty table space when card selected */}
+                  {selectedCardId && isMyTurn && (
+                    <div className="flex items-center justify-center border-2 border-dashed border-amber-400/40 rounded-xl w-14 h-20 text-amber-300/60 text-[10px] font-bold uppercase tracking-wider text-center p-1 pointer-events-none">
+                      Throw Here
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -282,7 +303,7 @@ const Startgame = () => {
                     <div className="text-sm text-zinc-300">
                       {isMyTurn
                         ? selectedCardId
-                          ? "Card selected. Click table to play or capture."
+                          ? "Card selected. Click table empty space to throw."
                           : "Click a card to select it"
                         : "Waiting for your turn..."}
                     </div>
