@@ -225,7 +225,7 @@ app.prepare().then(() => {
         return callback?.({ success: false, error: "Game has not started" });
       }
 
-      const result = drawCard(room.gameState);
+      const result = drawCard(room.gameState, socket.id);
       processGameAction(roomId, room, result, callback, socket.id);
     });
 

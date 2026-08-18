@@ -120,9 +120,16 @@ export function findMatchingTableCards(rank: Rank, tableCards: Card[]): Card[] {
   return (tableCards || []).filter((card) => card.rank === rank);
 }
 
-export function drawCard(gameState: GameState): ActionResult<GameState> {
+export function drawCard(gameState: GameState, playerId?: string): ActionResult<GameState> {
   if (!gameState || !Array.isArray(gameState.players) || gameState.players.length === 0) {
     return { success: false, error: "Invalid game state" };
+  }
+
+  const activePlayerId = gameState.players[gameState.turnIndex];
+  const actingPlayerId = playerId ?? activePlayerId;
+
+  if (actingPlayerId && activePlayerId !== actingPlayerId) {
+    return { success: false, error: "Not this player's turn" };
   }
 
   if (!gameState.deck || gameState.deck.length === 0) {
@@ -130,15 +137,16 @@ export function drawCard(gameState: GameState): ActionResult<GameState> {
   }
 
   const nextState = cloneState(gameState);
-  const CARDS_PER_PLAYER = 4;
-
-  for (const playerId of nextState.players) {
-    if (!nextState.hands[playerId]) {
-      nextState.hands[playerId] = [];
-    }
-    const dealtCards = nextState.deck.splice(0, CARDS_PER_PLAYER);
-    nextState.hands[playerId].push(...dealtCards);
+  if (!nextState.hands[actingPlayerId]) {
+    nextState.hands[actingPlayerId] = [];
   }
+
+  const dealtCard = nextState.deck.shift();
+  if (!dealtCard) {
+    return { success: false, error: "Deck is empty" };
+  }
+
+  nextState.hands[actingPlayerId].push(dealtCard);
 
   return { success: true, state: nextState };
 }
