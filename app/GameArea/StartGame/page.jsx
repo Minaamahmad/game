@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSocket } from "@/Context/contextapi.js";
 
 const cardRankLabel = (rank) => (rank === "10" ? "10" : rank);
+const isRed = (suit) => suit === "♥" || suit === "♦";
 
 function Card({
   card,
@@ -14,31 +15,36 @@ function Card({
   onClick,
   isSelected = false,
   isInteractive = false,
+  style,
 }) {
   return (
     <div
       onClick={onClick}
+      style={style}
       className={[
-        "relative w-14 h-20 rounded-xl border shadow-xl bg-zinc-900 text-zinc-100 transition-all select-none",
-        isInteractive ? "cursor-pointer hover:-translate-y-1 hover:border-cyan-400" : "",
+        "relative w-14 h-20 rounded-lg border shadow-[0_6px_18px_rgba(0,0,0,0.5)] transition-all select-none",
+        isInteractive ? "cursor-pointer hover:-translate-y-2 hover:border-[#e8d9a0]" : "",
         isSelected
-          ? "border-amber-400 ring-2 ring-amber-400/50 -translate-y-2 shadow-amber-500/20"
-          : "border-zinc-500/70",
-        "flex items-center justify-center font-mono overflow-hidden",
+          ? "border-[#c9a227] ring-2 ring-[#c9a227]/60 -translate-y-3 shadow-[0_0_16px_rgba(201,162,39,0.35)]"
+          : "border-[#c9a227]/30",
+        "flex items-center justify-center font-serif overflow-hidden",
         className,
       ].join(" ")}
-      style={{ transformStyle: "preserve-3d" }}
     >
       {faceDown ? (
-        <div className="absolute inset-0 rounded-xl border border-cyan-300/60 bg-gradient-to-br from-cyan-900 to-slate-950 flex items-center justify-center">
-          <div className="absolute inset-1 rounded-lg border border-cyan-300/50" />
-          <span className="text-[10px] font-bold tracking-widest text-cyan-300">C</span>
+        <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-[#0f4a34] to-[#062318] flex items-center justify-center">
+          <div className="absolute inset-1 rounded-md border border-[#c9a227]/40" />
+          <span className="text-[10px] font-bold tracking-widest text-[#c9a227]/70">C</span>
         </div>
       ) : (
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-b from-white to-zinc-200 text-zinc-950">
+        <div className="absolute inset-0 rounded-lg bg-gradient-to-b from-[#fbf6e8] to-[#efe4c4]">
           <div className="flex flex-col h-full items-center justify-center">
-            <span className="text-xs font-black leading-none">{cardRankLabel(card?.rank)}</span>
-            <span className="text-[10px] font-bold mt-1">{card?.suit}</span>
+            <span className={`text-sm font-black leading-none ${isRed(card?.suit) ? "text-[#a3312c]" : "text-[#1a1a1a]"}`}>
+              {cardRankLabel(card?.rank)}
+            </span>
+            <span className={`text-xs mt-1 ${isRed(card?.suit) ? "text-[#a3312c]" : "text-[#1a1a1a]"}`}>
+              {card?.suit}
+            </span>
           </div>
         </div>
       )}
@@ -176,30 +182,53 @@ const Startgame = () => {
     stealCard(selectedCardId, targetPlayerId);
   };
 
+  // fan geometry for the first-person hand
+  const fanTransform = (idx, total) => {
+    const mid = (total - 1) / 2;
+    const offset = idx - mid;
+    const rot = offset * 9;
+    const x = offset * 34;
+    const y = Math.abs(offset) * 10;
+    return { transform: `translateX(${x}px) translateY(${y}px) rotate(${rot}deg)`, transformOrigin: "bottom center" };
+  };
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen relative overflow-hidden bg-[#07120d] font-serif text-[#e8d9a0]">
+      {/* felt backdrop + vignette */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 15%, rgba(15,74,52,0.55) 0%, rgba(7,18,13,1) 72%)",
+        }}
+      />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ boxShadow: "inset 0 0 180px 70px rgba(0,0,0,0.75)" }}
+      />
+
+      <div className="relative max-w-7xl mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-black uppercase tracking-widest text-cyan-300">Cassino Table</h1>
-            <div className="text-xs uppercase tracking-[0.28em] text-zinc-500">
-              {gameState ? `Room Code: ${gameState.roomId || "In Game"}` : "Waiting for room"}
+            <h1 className="text-2xl font-semibold uppercase tracking-[0.3em] text-[#e8d9a0] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]">
+              Cassino
+            </h1>
+            <div className="text-[10px] uppercase tracking-[0.3em] text-[#c9a227]/50 font-sans mt-1">
+              {gameState ? `Table · ${gameState.roomId || "In Game"}` : "Waiting for room"}
             </div>
           </div>
-          <div className="flex gap-3">
-            <button
-              className="rounded-xl border border-cyan-400/60 px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-cyan-400/10 disabled:opacity-50 transition-colors"
-              onClick={drawFromDeck}
-              disabled={!gameState || !isMyTurn}
-            >
-              Draw Deck
-            </button>
-          </div>
+          <button
+            className="rounded-md border border-[#c9a227]/60 px-5 py-2 text-[11px] font-bold uppercase tracking-[0.25em] font-sans text-[#e8d9a0] hover:bg-[#c9a227]/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            onClick={drawFromDeck}
+            disabled={!gameState || !isMyTurn}
+          >
+            Draw
+          </button>
         </div>
 
         {!gameState ? (
-          <div className="rounded-2xl border border-zinc-800 p-10 text-zinc-500 text-center">
-            Waiting for game_state...
+          <div className="rounded-2xl border border-[#c9a227]/20 p-10 text-[#e8d9a0]/40 text-center font-sans text-sm tracking-widest uppercase">
+            Waiting for game state...
           </div>
         ) : (
           <div className="space-y-6">
@@ -208,31 +237,33 @@ const Startgame = () => {
               {gameState.players?.map((playerId) => (
                 <div
                   key={playerId}
-                  className={`rounded-2xl border p-4 transition-all ${
+                  className={`rounded-xl border p-4 transition-all ${
                     currentPlayerId === playerId
-                      ? "border-emerald-500/50 bg-emerald-950/20 shadow-lg shadow-emerald-500/5"
-                      : "border-zinc-800 bg-zinc-900/70"
+                      ? "border-[#c9a227]/70 bg-[#c9a227]/[0.06] shadow-[0_0_20px_rgba(201,162,39,0.08)]"
+                      : "border-[#c9a227]/15 bg-black/20"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-400 truncate max-w-[130px]">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e8d9a0]/60 font-sans truncate max-w-[130px]">
                       {playerId === myId ? `${playerId} (You)` : playerId}
                     </span>
                     {currentPlayerId === playerId && (
-                      <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                      <span className="text-[9px] uppercase font-bold text-[#c9a227] bg-[#c9a227]/15 px-2 py-0.5 rounded-full font-sans">
                         Turn
                       </span>
                     )}
                   </div>
-                  <div className="mt-4 flex gap-2 items-baseline">
-                    <span className="text-xl font-black text-cyan-300">{roomScore[playerId] ?? 0}</span>
-                    <span className="text-xs text-zinc-500">pts</span>
+                  <div className="mt-3 flex gap-2 items-baseline">
+                    <span className="text-xl font-black text-[#e8d9a0]">{roomScore[playerId] ?? 0}</span>
+                    <span className="text-[10px] text-[#e8d9a0]/40 font-sans">pts</span>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {(gameState.captureStacks?.[playerId] ?? []).slice(-3).map((stackCard) => (
                       <span
                         key={stackCard.id}
-                        className="px-2 py-1 rounded-full text-[9px] bg-zinc-800 text-zinc-300 font-mono"
+                        className={`px-1.5 py-0.5 rounded text-[9px] bg-black/30 border border-[#c9a227]/20 font-mono ${
+                          isRed(stackCard.suit) ? "text-[#c9784f]" : "text-[#e8d9a0]/70"
+                        }`}
                       >
                         {stackCard.rank}{stackCard.suit}
                       </span>
@@ -243,18 +274,18 @@ const Startgame = () => {
             </section>
 
             {/* Table Drop Zone Area */}
-            <section className="rounded-3xl border border-cyan-400/30 bg-zinc-900/60 p-6">
+            <section className="rounded-[2rem] border border-[#c9a227]/25 bg-black/20 p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.35em] text-zinc-500">Table</div>
-                  <div className="text-sm text-zinc-300">
+                  <div className="text-[10px] uppercase tracking-[0.35em] text-[#c9a227]/50 font-sans">The Table</div>
+                  <div className="text-xs text-[#e8d9a0]/60 font-sans mt-1">
                     {selectedCardId && isMyTurn
-                      ? "Click matching table card to capture, or empty table space to throw."
-                      : `${gameState.table?.length ?? 0} face-up cards`}
+                      ? "Tap a matching card to capture, or open felt to throw."
+                      : `${gameState.table?.length ?? 0} cards in play`}
                   </div>
                 </div>
-                <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Deck: {gameState.deck?.length ?? gameState.deckCount ?? 0}
+                <div className="text-[10px] uppercase tracking-[0.2em] text-[#e8d9a0]/40 font-sans">
+                  Deck {gameState.deck?.length ?? gameState.deckCount ?? 0}
                 </div>
               </div>
 
@@ -262,8 +293,8 @@ const Startgame = () => {
                 onClick={handleTableAreaClick}
                 className={`min-h-44 rounded-2xl border transition-all p-6 ${
                   selectedCardId && isMyTurn
-                    ? "border-amber-400/80 bg-amber-500/10 cursor-pointer shadow-lg shadow-amber-500/5 ring-1 ring-amber-400/30"
-                    : "border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-900"
+                    ? "border-[#c9a227]/70 bg-[#c9a227]/[0.05] cursor-pointer ring-1 ring-[#c9a227]/20"
+                    : "border-[#c9a227]/10 bg-gradient-to-br from-[#0a1f16] to-[#07120d]"
                 }`}
               >
                 <div className="flex flex-wrap gap-4 min-h-28 items-center">
@@ -291,8 +322,8 @@ const Startgame = () => {
                   </AnimatePresence>
 
                   {selectedCardId && isMyTurn && (
-                    <div className="flex items-center justify-center border-2 border-dashed border-amber-400/40 rounded-xl w-14 h-20 text-amber-300/60 text-[10px] font-bold uppercase tracking-wider text-center p-1 pointer-events-none">
-                      Throw Here
+                    <div className="flex items-center justify-center border-2 border-dashed border-[#c9a227]/30 rounded-lg w-14 h-20 text-[#c9a227]/50 text-[9px] font-bold uppercase tracking-wider text-center p-1 pointer-events-none font-sans">
+                      Throw
                     </div>
                   )}
                 </div>
@@ -300,47 +331,52 @@ const Startgame = () => {
             </section>
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Your Hand */}
-              <section className="rounded-3xl border border-amber-300/30 bg-zinc-900/60 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.35em] text-zinc-500">Your Hand</div>
-                    <div className="text-sm text-zinc-300">
-                      {isMyTurn
-                        ? selectedCardId
-                          ? "Card selected. Click table to throw or capture."
-                          : "Click a card to select it"
-                        : "Waiting for your turn..."}
-                    </div>
+              {/* Your Hand — first-person fan */}
+              <section className="rounded-[2rem] border border-[#c9a227]/25 bg-black/20 p-6 pb-10">
+                <div className="mb-4">
+                  <div className="text-[10px] uppercase tracking-[0.35em] text-[#c9a227]/50 font-sans">Your Hand</div>
+                  <div className="text-xs text-[#e8d9a0]/60 font-sans mt-1">
+                    {isMyTurn
+                      ? selectedCardId
+                        ? "Card raised. Tap the table to throw or capture."
+                        : "Tap a card to raise it"
+                      : "Waiting for your turn..."}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-4 pt-2 min-h-24">
+                <div className="relative flex justify-center pt-6 min-h-[9rem]">
                   <AnimatePresence mode="popLayout">
-                    {(myHand || []).map((card) => (
-                      <motion.div
-                        layout
-                        key={card.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Card
-                          card={card}
-                          isInteractive={isMyTurn}
-                          isSelected={selectedCardId === card.id}
-                          onClick={() => handleHandCardClick(card.id)}
-                        />
-                      </motion.div>
-                    ))}
+                    {(myHand || []).map((card, idx) => {
+                      const fan = fanTransform(idx, myHand.length);
+                      const selected = selectedCardId === card.id;
+                      return (
+                        <motion.div
+                          layout
+                          key={card.id}
+                          initial={{ opacity: 0, y: 30 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.25 }}
+                          className="absolute bottom-0"
+                          style={fan}
+                        >
+                          <Card
+                            card={card}
+                            isInteractive={isMyTurn}
+                            isSelected={selected}
+                            onClick={() => handleHandCardClick(card.id)}
+                            style={selected ? { transform: "translateY(-14px)" } : undefined}
+                          />
+                        </motion.div>
+                      );
+                    })}
                   </AnimatePresence>
                 </div>
               </section>
 
               {/* Capture Stacks */}
-              <section className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-6">
-                <div className="text-xs uppercase tracking-[0.35em] text-zinc-500 mb-4">Capture Stacks</div>
+              <section className="rounded-[2rem] border border-[#c9a227]/15 bg-black/20 p-6">
+                <div className="text-[10px] uppercase tracking-[0.35em] text-[#c9a227]/50 font-sans mb-4">Capture Stacks</div>
                 <div className="space-y-4">
                   {(gameState.players ?? []).map((playerId) => {
                     const stack = gameState.captureStacks?.[playerId] ?? [];
@@ -355,18 +391,18 @@ const Startgame = () => {
                       <div
                         key={playerId}
                         onClick={(e) => handleStackClick(e, playerId)}
-                        className={`rounded-2xl border p-3 transition-colors ${
+                        className={`rounded-xl border p-3 transition-colors ${
                           canSteal && isMyTurn
-                            ? "border-rose-500/80 bg-rose-500/10 cursor-pointer hover:border-rose-400"
-                            : "border-zinc-800"
+                            ? "border-[#a3312c]/70 bg-[#a3312c]/10 cursor-pointer hover:border-[#a3312c]"
+                            : "border-[#c9a227]/10"
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 truncate max-w-[180px]">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e8d9a0]/60 font-sans truncate max-w-[180px]">
                             {playerId === myId ? `${playerId} (You)` : playerId}{" "}
-                            {canSteal && isMyTurn ? "(Click to Steal!)" : ""}
+                            {canSteal && isMyTurn ? "· Steal" : ""}
                           </span>
-                          <span className="text-[10px] text-zinc-500">{stack.length} cards</span>
+                          <span className="text-[9px] text-[#e8d9a0]/30 font-sans">{stack.length} cards</span>
                         </div>
                         <div className="mt-3 flex gap-2">
                           <AnimatePresence>
