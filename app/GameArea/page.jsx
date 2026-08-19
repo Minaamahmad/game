@@ -1,52 +1,74 @@
-
 import React from 'react'
+
+const SUITS = ['♠', '♥', '♦', '♣']
+
 const Game = () => {
-
-
-
-
-
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 relative overflow-hidden">
-      {/* ambient glow */}
-      <div className="absolute w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
+    <div className="min-h-screen flex items-center justify-center bg-[#0a2a1f] relative overflow-hidden font-serif">
+      {/* felt texture / vignette */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(circle at 50% 40%, rgba(20,74,54,0.9) 0%, rgba(6,28,20,1) 75%)',
+        }}
+      />
+      <div
+        className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(45deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px)',
+        }}
+      />
 
-      <div className="relative flex flex-col items-center gap-6">
-        {/* spinner ring */}
-        <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-4 border-cyan-500/20" />
-          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-cyan-400 animate-spin" />
+      {/* gold hairline border frame */}
+      <div className="absolute inset-6 border border-[#c9a227]/20 rounded-sm pointer-events-none" />
+
+      <div className="relative flex flex-col items-center gap-8">
+        {/* dealing card stack */}
+        <div className="relative w-24 h-32">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="absolute inset-0 rounded-md border border-[#c9a227]/40 shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+              style={{
+                background: 'linear-gradient(135deg, #0f4a34 0%, #0a2a1f 100%)',
+                animation: `dealCard 1.6s cubic-bezier(0.6,0,0.3,1) ${i * 0.25}s infinite`,
+              }}
+            >
+              <div className="absolute inset-2 border border-[#c9a227]/30 rounded-sm flex items-center justify-center">
+                <span
+                  className="text-[#c9a227]/60 text-2xl"
+                  style={{ animation: `suitCycle 1.6s steps(1) ${i * 0.25}s infinite` }}
+                >
+                  {SUITS[i % SUITS.length]}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <h1 className="text-cyan-300 font-mono text-xl tracking-[0.3em] uppercase animate-pulse drop-shadow-[0_0_10px_rgba(34,211,238,0.7)]">
-          Starting Game
-        </h1>
-
-        {/* animated dots */}
-        <div className="flex gap-1 font-mono text-cyan-400 text-2xl -mt-4">
-          <span className="animate-bounce [animation-delay:-0.3s]">.</span>
-          <span className="animate-bounce [animation-delay:-0.15s]">.</span>
-          <span className="animate-bounce">.</span>
+        {/* title */}
+        <div className="flex flex-col items-center gap-2">
+          <h1 className="text-[#e8d9a0] text-3xl tracking-[0.35em] uppercase font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+            Cassino
+          </h1>
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-px bg-[#c9a227]/50" />
+            <span className="text-[#c9a227] text-xs tracking-[0.4em] uppercase font-sans">
+              Dealing you in
+            </span>
+            <span className="w-8 h-px bg-[#c9a227]/50" />
+          </div>
         </div>
 
-        {/* progress bar */}
-        <div className="w-64 h-2 bg-zinc-800 rounded-full overflow-hidden border border-cyan-500/30">
-          <div className="h-full bg-cyan-400 rounded-full animate-[loading_1.8s_ease-in-out_infinite] shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
-        </div>
-
-        <p className="text-zinc-500 font-mono text-xs tracking-widest uppercase">
-          Connecting to server
+        {/* status */}
+        <p className="text-[#e8d9a0]/40 font-mono text-[11px] tracking-widest uppercase">
+          Connecting to table
         </p>
       </div>
 
-      <style>{`
-        @keyframes loading {
-          0% { width: 0%; margin-left: 0%; }
-          50% { width: 60%; margin-left: 20%; }
-          100% { width: 0%; margin-left: 100%; }
-        }
-      `}</style>
+      
     </div>
   )
 }
