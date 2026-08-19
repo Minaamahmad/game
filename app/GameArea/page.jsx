@@ -67,7 +67,18 @@ const Game = () => {
           Connecting to table
         </p>
       </div>
-
+<style>{`
+        @keyframes dealCard {
+          0%   { transform: translateY(-40px) rotate(-8deg); opacity: 0; }
+          15%  { transform: translateY(0) rotate(0deg); opacity: 1; }
+          70%  { transform: translateY(0) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(30px) rotate(6deg); opacity: 0; }
+        }
+        @keyframes suitCycle {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 0.2; }
+        }
+      `}</style>
       
     </div>
   )
