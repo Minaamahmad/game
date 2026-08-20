@@ -61,6 +61,11 @@ function processGameAction(roomId, room, result, callback, socketId) {
   // Extract inner state if returned inside an ActionResult envelope
   let nextState = result.state ? result.state : result;
 
+  // CRITICAL: Preserve the original deck array if gameEngine omitted it
+  if (!nextState.deck && room.gameState?.deck) {
+    nextState.deck = room.gameState.deck;
+  }
+
   // Advance turn after successful action
   nextState = advanceTurn(nextState);
 
