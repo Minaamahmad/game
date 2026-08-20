@@ -24,6 +24,11 @@ let io;
 function sanitizeGameStateForPlayer(gameState, viewerId, roomId) {
   if (!gameState) return null;
 
+  // Preserve deck length whether gameState contains the raw deck array or a pre-calculated deckCount
+  const count = Array.isArray(gameState.deck)
+    ? gameState.deck.length
+    : (gameState.deckCount ?? 0);
+
   return {
     roomId: roomId || null,
     players: gameState.players || [],
@@ -31,11 +36,10 @@ function sanitizeGameStateForPlayer(gameState, viewerId, roomId) {
     table: gameState.table || [],
     captureStacks: gameState.captureStacks || {},
     lastCapturerId: gameState.lastCapturerId || null,
-    deckCount: Array.isArray(gameState.deck) ? gameState.deck.length : (gameState.deckCount ?? 0),
+    deckCount: count,
     hands: viewerId && gameState.hands ? { [viewerId]: gameState.hands[viewerId] || [] } : {},
   };
 }
-
 function broadcastRoomGameState(roomId, room) {
   if (!room || !room.gameState) return;
 
