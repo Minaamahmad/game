@@ -136,7 +136,7 @@ const WaitingPage = () => {
         <div className="flex items-start justify-between mb-10">
           <div>
             <div className="text-[11px] tracking-[0.34em] uppercase mb-2 text-[#C9A227] font-mono">
-              Cassino · Table Lobby
+               Lobby
             </div>
             <h1
               className="text-4xl sm:text-5xl font-semibold text-[#F3EFE3]"
