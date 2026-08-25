@@ -201,7 +201,7 @@ const WaitingPage = () => {
               background: filledCount >= 4 ? "#C9A227" : "transparent",
             }}
           >
-            Ready
+            Waiting
           </button>
         </div>
       </div>

@@ -8,8 +8,14 @@ export default function Home() {
   const [roomId, setRoomId] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState("");
+  const [shake, setShake] = useState(false);
   const router = useRouter();
   const socket = useSocket();
+
+  const triggerShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 400);
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -18,8 +24,8 @@ export default function Home() {
       setIsJoining(false);
       if (!res.success) {
         setError(res.message || "Failed to join room");
+        triggerShake();
       }
-   
     };
 
     const handleGameStart = (data) => {
@@ -47,6 +53,7 @@ export default function Home() {
 
     if (!trimmed || !Number.isInteger(num) || num <= 0) {
       setError("Enter a valid room code");
+      triggerShake();
       return;
     }
 
@@ -61,7 +68,7 @@ export default function Home() {
     if (e.key === "Enter") joinRoom();
   };
 
- return (
+  return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950">
       <div
         className={`flex flex-col items-center gap-7 px-10 py-9 rounded-2xl
@@ -77,42 +84,24 @@ export default function Home() {
             Enter Room Code
           </h2>
         </div>
- 
-        <div className="flex gap-3">
-          {digits.map((digit, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <input
-                ref={(el) => (inputRefs.current[i] = el)}
-                type="text"
-                inputMode="numeric"
-                maxLength={LENGTH}
-                value={digit}
-                onChange={(e) => handleChange(i, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(i, e)}
-                onFocus={(e) => e.target.select()}
-                disabled={isJoining}
-                aria-label={`Digit ${i + 1} of ${LENGTH}`}
-                className={`w-12 h-14 text-center text-2xl font-mono
-                          bg-black text-cyan-300 rounded-lg
-                          border-2 transition-all duration-200
-                          focus:outline-none disabled:opacity-40
-                          ${
-                            digit
-                              ? "border-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.5)]"
-                              : "border-cyan-500/25 focus:border-cyan-400/70"
-                          }`}
-              />
-              <span
-                className={`text-xs transition-colors duration-300 ${
-                  digit ? "text-amber-400" : "text-zinc-700"
-                }`}
-              >
-                {SUITS[i]}
-              </span>
-            </div>
-          ))}
-        </div>
- 
+
+        <input
+          type="text"
+          inputMode="numeric"
+          value={roomId}
+          onChange={(e) => setRoomId(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={(e) => e.target.select()}
+          disabled={isJoining}
+          placeholder="Room code"
+          aria-label="Room code"
+          className="w-48 h-14 text-center text-2xl font-mono
+                   bg-black text-cyan-300 rounded-lg
+                   border-2 border-cyan-500/25 transition-all duration-200
+                   focus:outline-none focus:border-cyan-400/70
+                   disabled:opacity-40"
+        />
+
         <p
           className={`font-mono text-xs tracking-wide h-4 transition-opacity duration-200 ${
             error ? "text-red-400 opacity-100" : "opacity-0"
@@ -120,10 +109,10 @@ export default function Home() {
         >
           {error || "placeholder"}
         </p>
- 
+
         <button
           onClick={joinRoom}
-          disabled={!isComplete || isJoining}
+          disabled={!roomId.trim() || isJoining}
           className="w-48 py-3 font-mono font-bold tracking-widest uppercase
                    text-black bg-cyan-400 rounded-lg
                    hover:bg-cyan-300 hover:shadow-[0_0_25px_rgba(34,211,238,0.7)]
@@ -134,7 +123,7 @@ export default function Home() {
           {isJoining ? "Joining..." : "Join"}
         </button>
       </div>
- 
+
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }

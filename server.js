@@ -52,8 +52,8 @@ function broadcastRoomGameState(roomId, room) {
   }
 }
 
-// Helper to update state safely, advance turn, check game over, and broadcast
-function processGameAction(roomId, room, result, callback, socketId) {
+// Helper to update state safely, optionally advance turn, check game over, and broadcast
+function processGameAction(roomId, room, result, callback, socketId, shouldAdvanceTurn = false) {
   if (!result || result.success === false) {
     return callback?.(result || { success: false, error: "Action failed" });
   }
@@ -66,12 +66,21 @@ function processGameAction(roomId, room, result, callback, socketId) {
     nextState.deck = room.gameState.deck;
   }
 
-  // Advance turn after successful action
-  nextState = advanceTurn(nextState);
+  if (shouldAdvanceTurn) {
+    const turnResult = advanceTurn(nextState);
+    if (!turnResult.success) {
+      return callback?.(turnResult);
+    }
+    nextState = turnResult.state;
+  }
 
   // Check for game over
   if (isGameOver(nextState)) {
-    nextState = sweepRemainingTableCards(nextState);
+    const sweepResult = sweepRemainingTableCards(nextState);
+    if (!sweepResult.success) {
+      return callback?.(sweepResult);
+    }
+    nextState = sweepResult.state;
   }
 
   room.gameState = nextState;
@@ -235,7 +244,7 @@ app.prepare().then(() => {
       }
 
       const result = drawCard(room.gameState, socket.id);
-      processGameAction(roomId, room, result, callback, socket.id);
+      processGameAction(roomId, room, result, callback, socket.id, false);
     });
 
     socket.on("game:throw", (cardId, callback) => {
@@ -247,7 +256,7 @@ app.prepare().then(() => {
       }
 
       const result = throwCard(room.gameState, socket.id, cardId);
-      processGameAction(roomId, room, result, callback, socket.id);
+      processGameAction(roomId, room, result, callback, socket.id, true);
     });
 
     socket.on("game:capture", (cardId, callback) => {
@@ -259,7 +268,7 @@ app.prepare().then(() => {
       }
 
       const result = captureCards(room.gameState, socket.id, cardId);
-      processGameAction(roomId, room, result, callback, socket.id);
+      processGameAction(roomId, room, result, callback, socket.id, false);
     });
 
     socket.on("game:steal", (cardId, targetPlayerId, callback) => {
@@ -271,7 +280,7 @@ app.prepare().then(() => {
       }
 
       const result = stealCard(room.gameState, socket.id, cardId, targetPlayerId);
-      processGameAction(roomId, room, result, callback, socket.id);
+      processGameAction(roomId, room, result, callback, socket.id, true);
     });
 
     socket.on("game:get_results", (callback) => {
