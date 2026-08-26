@@ -61,7 +61,7 @@ const Startgame = () => {
   useEffect(() => {
     if (!socket) return undefined;
 
-    socket.emit("room:sync", (payload) => {
+    const syncRoom = () => socket.emit("room:sync", (payload) => {
       if (!payload?.success || !payload.started) {
         router.replace("/GameArea/Waiting");
         return;
@@ -74,6 +74,29 @@ const Startgame = () => {
       }
     });
 
+    const handleJoinSuccess = (payload) => {
+      if (payload?.success) syncRoom();
+    };
+
+    socket.on("join-success", handleJoinSuccess);
+
+    const roomCode = localStorage.getItem("cassino-room-code");
+    let reconnectToken = localStorage.getItem("cassino-reconnect-token");
+    if (!reconnectToken) {
+      reconnectToken = crypto.randomUUID();
+      localStorage.setItem("cassino-reconnect-token", reconnectToken);
+    }
+    const rejoinRoom = () => {
+      if (roomCode) {
+        socket.emit("roomid", { roomcode: roomCode, reconnectToken });
+      } else {
+        syncRoom();
+      }
+    };
+
+    if (socket.connected) rejoinRoom();
+    else socket.once("connect", rejoinRoom);
+
     const handleGameState = (state) => {
       setGameState(state);
     };
@@ -81,6 +104,8 @@ const Startgame = () => {
     socket.on("game_state", handleGameState);
 
     return () => {
+      socket.off("join-success", handleJoinSuccess);
+      socket.off("connect", rejoinRoom);
       socket.off("game_state", handleGameState);
     };
   }, [router, socket]);
@@ -220,7 +245,7 @@ const Startgame = () => {
           <button
             className="rounded-md border border-[#c9a227]/60 px-5 py-2 text-[11px] font-bold uppercase tracking-[0.25em] font-sans text-[#e8d9a0] hover:bg-[#c9a227]/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             onClick={drawFromDeck}
-            disabled={!gameState || !isMyTurn}
+            disabled={!gameState || !isMyTurn || myHand.length >= 5}
           >
             Draw
           </button>

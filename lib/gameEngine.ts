@@ -136,6 +136,11 @@ export function drawCard(gameState: GameState, playerId?: string): ActionResult<
     return { success: false, error: "Deck is empty" };
   }
 
+  const currentHand = gameState.hands[actingPlayerId] || [];
+  if (currentHand.length >= 5) {
+    return { success: false, error: "Player cannot hold more than 5 cards" };
+  }
+
   const nextState = cloneState(gameState);
   if (!nextState.hands[actingPlayerId]) {
     nextState.hands[actingPlayerId] = [];
@@ -159,6 +164,10 @@ export function throwCard(gameState: GameState, playerId: string, cardId: string
   const activePlayerId = gameState.players[gameState.turnIndex];
   if (activePlayerId !== playerId) {
     return { success: false, error: "Not this player's turn" };
+  }
+
+  if ((gameState.hands[playerId] || []).length < 5 && gameState.deck.length > 0) {
+    return { success: false, error: "Draw one card before playing" };
   }
 
   const nextState = cloneState(gameState);
@@ -188,6 +197,10 @@ export function captureCards(gameState: GameState, playerId: string, cardId: str
   const activePlayerId = gameState.players[gameState.turnIndex];
   if (activePlayerId !== playerId) {
     return { success: false, error: "Not this player's turn" };
+  }
+
+  if ((gameState.hands[playerId] || []).length < 5 && gameState.deck.length > 0) {
+    return { success: false, error: "Draw one card before capturing" };
   }
 
   const hand = gameState.hands[playerId] || [];
@@ -245,6 +258,10 @@ export function stealCard(
   const activePlayerId = gameState.players[gameState.turnIndex];
   if (activePlayerId !== playerId) {
     return { success: false, error: "Not this player's turn" };
+  }
+
+  if ((gameState.hands[playerId] || []).length < 5 && gameState.deck.length > 0) {
+    return { success: false, error: "Draw one card before stealing" };
   }
 
   const targetPlayer = gameState.players.find((player) => player === targetPlayerId);

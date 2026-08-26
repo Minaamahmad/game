@@ -25,7 +25,9 @@ export default function Home() {
       if (!res.success) {
         setError(res.message || "Failed to join room");
         triggerShake();
+        return;
       }
+      localStorage.setItem("cassino-room-code", String(res.roomcode));
     };
 
     const handleGameStart = (data) => {
@@ -61,7 +63,12 @@ export default function Home() {
 
     setError("");
     setIsJoining(true);
-    socket.emit("roomid", trimmed);
+    let reconnectToken = localStorage.getItem("cassino-reconnect-token");
+    if (!reconnectToken) {
+      reconnectToken = crypto.randomUUID();
+      localStorage.setItem("cassino-reconnect-token", reconnectToken);
+    }
+    socket.emit("roomid", { roomcode: trimmed, reconnectToken });
   }, [roomId, socket, isJoining]);
 
   const handleKeyDown = (e) => {

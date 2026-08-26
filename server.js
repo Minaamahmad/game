@@ -53,7 +53,15 @@ function broadcastRoomGameState(roomId, room) {
 }
 
 // Helper to update state safely, optionally advance turn, check game over, and broadcast
-function processGameAction(roomId, room, result, callback, socketId, shouldAdvanceTurn = false) {
+function processGameAction(
+  roomId,
+  room,
+  result,
+  callback,
+  socketId,
+  shouldAdvanceTurn = false,
+  shouldDrawAfterCapture = false
+) {
   if (!result || result.success === false) {
     return callback?.(result || { success: false, error: "Action failed" });
   }
@@ -61,9 +69,17 @@ function processGameAction(roomId, room, result, callback, socketId, shouldAdvan
   // Extract inner state if returned inside an ActionResult envelope
   let nextState = result.state ? result.state : result;
 
-  // CRITICAL: Preserve the original deck array if gameEngine omitted it
   if (!nextState.deck && room.gameState?.deck) {
     nextState.deck = room.gameState.deck;
+  }
+
+  if (shouldDrawAfterCapture) {
+    const drawResult = drawCard(nextState, socketId);
+    if (drawResult.success) {
+      nextState = drawResult.state;
+    } else if (drawResult.error !== "Deck is empty") {
+      return callback?.(drawResult);
+    }
   }
 
   if (shouldAdvanceTurn) {
@@ -121,6 +137,12 @@ function migratePlayerSocket(room, oldSocketId, newSocketId) {
       room.gameState.lastCapturerId = newSocketId;
     }
   }
+
+  if (room.playerTokens) {
+    for (const [token, playerId] of Object.entries(room.playerTokens)) {
+      if (playerId === oldSocketId) room.playerTokens[token] = newSocketId;
+    }
+  }
 }
 
 const app = next({ dev, hostname, port });
@@ -138,7 +160,9 @@ app.prepare().then(() => {
     });
 
     // --- Join / Create / Rejoin Room ---
-    socket.on("roomid", (roomcode) => {
+    socket.on("roomid", (roomDetails) => {
+      const roomcode = typeof roomDetails === "object" ? roomDetails.roomcode : roomDetails;
+      const reconnectToken = typeof roomDetails === "object" ? roomDetails.reconnectToken : null;
       const num = Number(roomcode);
       if (!Number.isInteger(num) || num <= 0) {
         return socket.emit("join-success", { success: false, message: "Invalid room code" });
@@ -148,18 +172,21 @@ app.prepare().then(() => {
       let room = rooms.get(roomId);
 
       if (!room) {
-        room = { players: [], turnIndex: 0, started: false };
+        room = { players: [], playerTokens: {}, turnIndex: 0, started: false };
         rooms.set(roomId, room);
       }
+      room.playerTokens ||= {};
 
       socket.join(roomId);
       socket.data.roomId = roomId;
 
       // Handle re-joining an in-progress game
       if (room.started) {
-        const stalePlayerId = room.players.find((id) => !io.sockets.sockets.has(id));
+        const tokenPlayerId = reconnectToken ? room.playerTokens?.[reconnectToken] : null;
+        const stalePlayerId = tokenPlayerId || room.players.find((id) => !io.sockets.sockets.has(id));
         if (stalePlayerId) {
           migratePlayerSocket(room, stalePlayerId, socket.id);
+          if (reconnectToken) room.playerTokens[reconnectToken] = socket.id;
           socket.emit("join-success", {
             success: true,
             message: `Reconnected to room: ${roomId}`,
@@ -268,7 +295,7 @@ app.prepare().then(() => {
       }
 
       const result = captureCards(room.gameState, socket.id, cardId);
-      processGameAction(roomId, room, result, callback, socket.id, false);
+      processGameAction(roomId, room, result, callback, socket.id, false, true);
     });
 
     socket.on("game:steal", (cardId, targetPlayerId, callback) => {
@@ -280,7 +307,7 @@ app.prepare().then(() => {
       }
 
       const result = stealCard(room.gameState, socket.id, cardId, targetPlayerId);
-      processGameAction(roomId, room, result, callback, socket.id, true);
+      processGameAction(roomId, room, result, callback, socket.id, true, true);
     });
 
     socket.on("game:get_results", (callback) => {

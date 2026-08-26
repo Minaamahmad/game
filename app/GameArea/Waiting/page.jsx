@@ -92,6 +92,7 @@ const WaitingPage = () => {
     const handleJoinSuccess = (payload) => {
       if (payload?.success && payload.roomcode) {
         setRoomCode(payload.roomcode);
+        localStorage.setItem("cassino-room-code", String(payload.roomcode));
       }
     };
 
