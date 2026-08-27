@@ -16,38 +16,70 @@ function Card({
   isSelected = false,
   isInteractive = false,
   style,
+  liftZ = 0,
+  restRotateX = 6,
 }) {
+  const flipTransform = faceDown ? "rotateY(180deg)" : "rotateY(0deg)";
+  const poseTransform = isSelected
+    ? `translateZ(${44 + liftZ}px) translateY(-14px) rotateX(0deg)`
+    : `translateZ(${liftZ}px) rotateX(${restRotateX}deg)`;
+
   return (
     <div
       onClick={onClick}
-      style={style}
+      style={{ perspective: "900px", ...style }}
       className={[
-        "relative w-14 h-20 rounded-lg border shadow-[0_6px_18px_rgba(0,0,0,0.5)] transition-all select-none",
-        isInteractive ? "cursor-pointer hover:-translate-y-2 hover:border-[#e8d9a0]" : "",
-        isSelected
-          ? "border-[#c9a227] ring-2 ring-[#c9a227]/60 -translate-y-3 shadow-[0_0_16px_rgba(201,162,39,0.35)]"
-          : "border-[#c9a227]/30",
-        "flex items-center justify-center font-serif overflow-hidden",
+        "relative w-14 h-20 select-none",
+        isInteractive ? "cursor-pointer card-3d-interactive" : "",
         className,
       ].join(" ")}
     >
-      {faceDown ? (
-        <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-[#0f4a34] to-[#062318] flex items-center justify-center">
-          <div className="absolute inset-1 rounded-md border border-[#c9a227]/40" />
-          <span className="text-[10px] font-bold tracking-widest text-[#c9a227]/70">C</span>
-        </div>
-      ) : (
-        <div className="absolute inset-0 rounded-lg bg-gradient-to-b from-[#fbf6e8] to-[#efe4c4]">
-          <div className="flex flex-col h-full items-center justify-center">
-            <span className={`text-sm font-black leading-none ${isRed(card?.suit) ? "text-[#a3312c]" : "text-[#1a1a1a]"}`}>
-              {cardRankLabel(card?.rank)}
-            </span>
-            <span className={`text-xs mt-1 ${isRed(card?.suit) ? "text-[#a3312c]" : "text-[#1a1a1a]"}`}>
-              {card?.suit}
-            </span>
+      <div
+        className="card-3d-pose"
+        style={{ transform: poseTransform }}
+      >
+        <div
+          className="card-3d-flip"
+          style={{ transform: flipTransform }}
+        >
+          {/* Back face */}
+          <div
+            className={[
+              "card-3d-face rounded-lg border shadow-[0_6px_18px_rgba(0,0,0,0.5)]",
+              isSelected
+                ? "border-[#c9a227] ring-2 ring-[#c9a227]/60 shadow-[0_0_16px_rgba(201,162,39,0.35)]"
+                : "border-[#c9a227]/30",
+            ].join(" ")}
+            style={{ transform: "rotateY(180deg)" }}
+          >
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-[#0f4a34] to-[#062318] flex items-center justify-center">
+              <div className="absolute inset-1 rounded-md border border-[#c9a227]/40" />
+              <span className="text-[10px] font-bold tracking-widest text-[#c9a227]/70">C</span>
+            </div>
+          </div>
+
+          {/* Front face */}
+          <div
+            className={[
+              "card-3d-face rounded-lg border shadow-[0_6px_18px_rgba(0,0,0,0.5)] font-serif overflow-hidden",
+              isSelected
+                ? "border-[#c9a227] ring-2 ring-[#c9a227]/60 shadow-[0_0_16px_rgba(201,162,39,0.35)]"
+                : "border-[#c9a227]/30",
+            ].join(" ")}
+          >
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-b from-[#fbf6e8] to-[#efe4c4]">
+              <div className="flex flex-col h-full items-center justify-center">
+                <span className={`text-sm font-black leading-none ${isRed(card?.suit) ? "text-[#a3312c]" : "text-[#1a1a1a]"}`}>
+                  {cardRankLabel(card?.rank)}
+                </span>
+                <span className={`text-xs mt-1 ${isRed(card?.suit) ? "text-[#a3312c]" : "text-[#1a1a1a]"}`}>
+                  {card?.suit}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -207,18 +239,64 @@ const Startgame = () => {
     stealCard(selectedCardId, targetPlayerId);
   };
 
-  // fan geometry for the first-person hand
+  // fan geometry for the first-person hand — now with 3D depth (rotateY + translateZ)
   const fanTransform = (idx, total) => {
     const mid = (total - 1) / 2;
     const offset = idx - mid;
-    const rot = offset * 9;
+    const rotZ = offset * 9;
+    const rotY = offset * 6;
     const x = offset * 34;
     const y = Math.abs(offset) * 10;
-    return { transform: `translateX(${x}px) translateY(${y}px) rotate(${rot}deg)`, transformOrigin: "bottom center" };
+    const z = -Math.abs(offset) * 14;
+    return {
+      transform: `translateX(${x}px) translateY(${y}px) translateZ(${z}px) rotateZ(${rotZ}deg) rotateY(${rotY}deg)`,
+      transformOrigin: "bottom center",
+    };
   };
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#07120d] font-serif text-[#e8d9a0]">
+      <style jsx global>{`
+        .card-3d-pose {
+          width: 100%;
+          height: 100%;
+          transform-style: preserve-3d;
+          transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .card-3d-flip {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          transform-style: preserve-3d;
+          transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .card-3d-face {
+          position: absolute;
+          inset: 0;
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+        .card-3d-interactive:hover .card-3d-pose {
+          transform: translateZ(20px) rotateX(0deg) !important;
+        }
+        .table-3d-perspective {
+          perspective: 1400px;
+        }
+        .table-3d-plane {
+          transform-style: preserve-3d;
+          transform: rotateX(10deg);
+        }
+        .hand-3d-perspective {
+          perspective: 1100px;
+        }
+        .hand-3d-plane {
+          transform-style: preserve-3d;
+        }
+        .stack-3d-perspective {
+          perspective: 800px;
+        }
+      `}</style>
+
       {/* felt backdrop + vignette */}
       <div
         className="absolute inset-0"
@@ -298,7 +376,7 @@ const Startgame = () => {
               ))}
             </section>
 
-            {/* Table Drop Zone Area */}
+            {/* Table Drop Zone Area — rendered as a tilted 3D plane */}
             <section className="rounded-[2rem] border border-[#c9a227]/25 bg-black/20 p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -314,49 +392,53 @@ const Startgame = () => {
                 </div>
               </div>
 
-              <div
-                onClick={handleTableAreaClick}
-                className={`min-h-44 rounded-2xl border transition-all p-6 ${
-                  selectedCardId && isMyTurn
-                    ? "border-[#c9a227]/70 bg-[#c9a227]/[0.05] cursor-pointer ring-1 ring-[#c9a227]/20"
-                    : "border-[#c9a227]/10 bg-gradient-to-br from-[#0a1f16] to-[#07120d]"
-                }`}
-              >
-                <div className="flex flex-wrap gap-4 min-h-28 items-center">
-                  <AnimatePresence>
-                    {(gameState.table ?? []).map((card) => {
-                      const isMatchingRank = selectedCard && selectedCard.rank === card.rank;
-                      return (
-                        <motion.div
-                          layout
-                          key={card.id}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.6 }}
-                          transition={{ duration: 0.2 }}
-                          onClick={handleTableCardClick}
-                        >
-                          <Card
-                            card={card}
-                            isInteractive={Boolean(selectedCardId && isMyTurn)}
-                            isSelected={Boolean(isMatchingRank && isMyTurn)}
-                          />
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
+              <div className="table-3d-perspective">
+                <div
+                  onClick={handleTableAreaClick}
+                  className={`table-3d-plane min-h-44 rounded-2xl border transition-all p-6 ${
+                    selectedCardId && isMyTurn
+                      ? "border-[#c9a227]/70 bg-[#c9a227]/[0.05] cursor-pointer ring-1 ring-[#c9a227]/20"
+                      : "border-[#c9a227]/10 bg-gradient-to-br from-[#0a1f16] to-[#07120d]"
+                  }`}
+                >
+                  <div className="flex flex-wrap gap-4 min-h-28 items-center">
+                    <AnimatePresence>
+                      {(gameState.table ?? []).map((card, tIdx) => {
+                        const isMatchingRank = selectedCard && selectedCard.rank === card.rank;
+                        return (
+                          <motion.div
+                            layout
+                            key={card.id}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.6 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={handleTableCardClick}
+                          >
+                            <Card
+                              card={card}
+                              isInteractive={Boolean(selectedCardId && isMyTurn)}
+                              isSelected={Boolean(isMatchingRank && isMyTurn)}
+                              liftZ={(tIdx % 3) * 2}
+                              restRotateX={4}
+                            />
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
 
-                  {selectedCardId && isMyTurn && (
-                    <div className="flex items-center justify-center border-2 border-dashed border-[#c9a227]/30 rounded-lg w-14 h-20 text-[#c9a227]/50 text-[9px] font-bold uppercase tracking-wider text-center p-1 pointer-events-none font-sans">
-                      Throw
-                    </div>
-                  )}
+                    {selectedCardId && isMyTurn && (
+                      <div className="flex items-center justify-center border-2 border-dashed border-[#c9a227]/30 rounded-lg w-14 h-20 text-[#c9a227]/50 text-[9px] font-bold uppercase tracking-wider text-center p-1 pointer-events-none font-sans">
+                        Throw
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Your Hand — first-person fan */}
+              {/* Your Hand — first-person 3D fan */}
               <section className="rounded-[2rem] border border-[#c9a227]/25 bg-black/20 p-6 pb-10">
                 <div className="mb-4">
                   <div className="text-[10px] uppercase tracking-[0.35em] text-[#c9a227]/50 font-sans">Your Hand</div>
@@ -369,37 +451,39 @@ const Startgame = () => {
                   </div>
                 </div>
 
-                <div className="relative flex justify-center pt-6 min-h-[9rem]">
-                  <AnimatePresence mode="popLayout">
-                    {(myHand || []).map((card, idx) => {
-                      const fan = fanTransform(idx, myHand.length);
-                      const selected = selectedCardId === card.id;
-                      return (
-                        <motion.div
-                          layout
-                          key={card.id}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -20 }}
-                          transition={{ duration: 0.25 }}
-                          className="absolute bottom-0"
-                          style={fan}
-                        >
-                          <Card
-                            card={card}
-                            isInteractive={isMyTurn}
-                            isSelected={selected}
-                            onClick={() => handleHandCardClick(card.id)}
-                            style={selected ? { transform: "translateY(-14px)" } : undefined}
-                          />
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
+                <div className="hand-3d-perspective relative flex justify-center pt-6 min-h-[9rem]">
+                  <div className="hand-3d-plane relative w-full flex justify-center">
+                    <AnimatePresence mode="popLayout">
+                      {(myHand || []).map((card, idx) => {
+                        const fan = fanTransform(idx, myHand.length);
+                        const selected = selectedCardId === card.id;
+                        return (
+                          <motion.div
+                            layout
+                            key={card.id}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.25 }}
+                            className="absolute bottom-0"
+                            style={fan}
+                          >
+                            <Card
+                              card={card}
+                              isInteractive={isMyTurn}
+                              isSelected={selected}
+                              onClick={() => handleHandCardClick(card.id)}
+                              restRotateX={8}
+                            />
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </section>
 
-              {/* Capture Stacks */}
+              {/* Capture Stacks — piled up in 3D */}
               <section className="rounded-[2rem] border border-[#c9a227]/15 bg-black/20 p-6">
                 <div className="text-[10px] uppercase tracking-[0.35em] text-[#c9a227]/50 font-sans mb-4">Capture Stacks</div>
                 <div className="space-y-4">
@@ -429,15 +513,19 @@ const Startgame = () => {
                           </span>
                           <span className="text-[9px] text-[#e8d9a0]/30 font-sans">{stack.length} cards</span>
                         </div>
-                        <div className="mt-3 flex gap-2">
+                        <div className="stack-3d-perspective mt-3 flex gap-2">
                           <AnimatePresence>
                             {stack.slice(-4).map((stackCard, idx) => (
                               <motion.div
                                 layout
                                 key={`${playerId}-${stackCard.id}-${idx}`}
                                 className="relative"
+                                style={{
+                                  transformStyle: "preserve-3d",
+                                  transform: `translateZ(${idx * 4}px) translateY(${-idx * 1.5}px)`,
+                                }}
                               >
-                                <Card card={stackCard} className="w-11 h-16 text-[10px]" />
+                                <Card card={stackCard} className="w-11 h-16 text-[10px]" restRotateX={0} />
                               </motion.div>
                             ))}
                           </AnimatePresence>
