@@ -76,18 +76,18 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#0d3b2a] via-[#072419] to-[#03110b]">
       <div
         className={`flex flex-col items-center gap-7 px-10 py-9 rounded-2xl
-                   border border-cyan-500/30 bg-zinc-900/60
-                   shadow-[0_0_40px_-10px_rgba(34,211,238,0.4)]
+                   border border-[#d4af37]/30 bg-[#072419]/80 backdrop-blur-sm
+                   shadow-[0_0_50px_-10px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.15)]
                    ${shake ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
       >
         <div className="flex flex-col items-center gap-1.5">
-          <span className="text-zinc-600 text-[10px] tracking-[0.4em]">
+          <span className="text-[#d4af37]/60 text-xs tracking-[0.4em]">
             ♠ ♥ ♦ ♣
           </span>
-          <h2 className="text-cyan-400 font-mono text-sm tracking-[0.3em] uppercase">
+          <h2 className="text-[#f5e6c8] font-serif text-2xl font-bold tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
             Enter Room Code
           </h2>
         </div>
@@ -102,16 +102,16 @@ export default function Home() {
           disabled={isJoining}
           placeholder="Room code"
           aria-label="Room code"
-          className="w-48 h-14 text-center text-2xl font-mono
-                   bg-black text-cyan-300 rounded-lg
-                   border-2 border-cyan-500/25 transition-all duration-200
-                   focus:outline-none focus:border-cyan-400/70
+          className="w-52 h-14 text-center text-2xl font-mono
+                   bg-[#03110b]/90 text-[#f5e6c8] placeholder-[#d4af37]/30 rounded-lg
+                   border border-[#d4af37]/40 transition-all duration-200
+                   focus:outline-none focus:border-[#d4af37] focus:shadow-[0_0_15px_rgba(212,175,55,0.3)]
                    disabled:opacity-40"
         />
 
         <p
           className={`font-mono text-xs tracking-wide h-4 transition-opacity duration-200 ${
-            error ? "text-red-400 opacity-100" : "opacity-0"
+            error ? "text-rose-400 opacity-100" : "opacity-0"
           }`}
         >
           {error || "placeholder"}
@@ -120,14 +120,14 @@ export default function Home() {
         <button
           onClick={joinRoom}
           disabled={!roomId.trim() || isJoining}
-          className="w-48 py-3 font-mono font-bold tracking-widest uppercase
-                   text-black bg-cyan-400 rounded-lg
-                   hover:bg-cyan-300 hover:shadow-[0_0_25px_rgba(34,211,238,0.7)]
+          className="w-52 py-3 font-mono font-bold tracking-widest uppercase
+                   text-[#072419] bg-[#d4af37] rounded-lg
+                   hover:bg-[#e6c250] hover:shadow-[0_0_20px_rgba(212,175,55,0.5)]
                    active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed
-                   disabled:hover:shadow-none disabled:hover:bg-cyan-400
+                   disabled:hover:shadow-none disabled:hover:bg-[#d4af37]
                    transition-all duration-150"
         >
-          {isJoining ? "Joining..." : "Join"}
+          {isJoining ? "Joining..." : "Join Table"}
         </button>
       </div>
 
