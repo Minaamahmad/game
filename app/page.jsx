@@ -30,11 +30,11 @@ export default function Home() {
       localStorage.setItem("cassino-room-code", String(res.roomcode));
     };
 
-    const handleGameStart = (data) => {
+    const handleGameStart = () => {
       router.push("/GameArea/StartGame");
     };
 
-    const handleWaiting = (data) => {
+    const handleWaiting = () => {
       router.push("/GameArea/Waiting");
     };
 
