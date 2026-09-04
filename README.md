@@ -1,6 +1,6 @@
-# Capture Room
+# Capture Cards
 
-Capture Room is a real-time browser card game inspired by classic capture-and-steal table-card mechanics. Players join a room, begin a 4-player match, and take turns drawing, throwing, capturing matching ranks from the table, or stealing the top card from another player's capture stack when the rank matches.
+Capture Cards is a real-time browser card game inspired by classic capture-and-steal table-card mechanics. Players join a room, begin a 4-player match, and take turns drawing, throwing, capturing matching ranks from the table, or stealing the top card from another player's capture stack when the rank matches.
 
 The project is built with Next.js, React, and Socket.IO for multiplayer room synchronization.
 
