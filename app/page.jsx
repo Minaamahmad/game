@@ -76,10 +76,13 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#0d3b2a] via-[#072419] to-[#03110b]">
+    <div 
+      className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/bg.jpg')" }}
+    >
       <div
         className={`flex flex-col items-center gap-7 px-10 py-9 rounded-2xl
-                   border border-[#d4af37]/30 bg-[#072419]/80 backdrop-blur-sm
+                   border border-[#d4af37]/30 bg-[#072419]/80 backdrop-blur-md
                    shadow-[0_0_50px_-10px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.15)]
                    ${shake ? "animate-[shake_0.4s_ease-in-out]" : ""}`}
       >
